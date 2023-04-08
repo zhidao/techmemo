@@ -1,0 +1,190 @@
+\documentclass{jsarticle}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{graphicx}
+
+\flushbottom
+\sloppy
+
+\setlength{\paperwidth}{210mm}
+\setlength{\paperheight}{297mm}
+\setlength{\voffset}{0mm}
+\setlength{\hoffset}{0mm}
+\setlength{\textwidth}{\paperwidth}
+\addtolength{\textwidth}{-30mm}
+\setlength{\textheight}{\paperheight}
+\addtolength{\textheight}{-60mm}
+\setlength{\topmargin}{-1in}
+\addtolength{\topmargin}{20mm}
+\setlength{\headheight}{0mm}
+\setlength{\headsep}{0mm}
+\setlength{\footskip}{10mm}
+\setlength{\oddsidemargin}{-1in}
+\addtolength{\oddsidemargin}{15mm}
+\setlength{\columnsep}{7mm}
+
+\title{\bf 多面体形状を持つ物体の慣性テンソル}
+\author{\Large{\bf 杉原 知道}}
+
+\begin{document}
+\maketitle
+
+\section{慣性テンソルとは}
+
+運動している剛体の原点まわり角運動量は$\boldsymbol{I}\boldsymbol{\omega}$で表せます。
+$\boldsymbol{\omega}$は角速度です。また$\boldsymbol{I}$は次式で定義されます。
+\begin{align*}
+\boldsymbol{I}
+=-\int_{\boldsymbol{p}\in V}\rho[\boldsymbol{p}\times]^{2}\mathrm{d}v
+=\int_{\boldsymbol{p}\in V}\rho\left[\begin{array}{ccc}
+ y^2+z^2 & -xy & -zx \\
+ -xy & z^2+x^2 & -yz \\
+ -zx & -yz & x^2+y^2
+\end{array}\right]\mathrm{d}v
+\end{align*}
+ただし$\rho$は剛体の密度、$\mathrm{d}v$は無限小体積要素、$\boldsymbol{p}=[x~y~z]^{\mathrm{T}}$は剛体内部の点、$[\boldsymbol{p}\times]$は$\boldsymbol{p}$の外積行列、$V$は剛体の内部領域です。
+これは{\bf 慣性テンソル}と呼ばれます（なぜ行列ではなくテンソルと呼ぶのか、という説明は割愛します）。
+
+この定義に基づいて、任意の閉じた密度一定の多面体の慣性テンソルの計算方法を導出するのが本記事の趣旨です。
+
+\section{原点を頂点に持つ四面体の慣性テンソル}
+
+今、四つの頂点のうち一つが原点と一致している四面体を考えます。
+残り三つの頂点の座標を$\boldsymbol{p}_{1}$、$\boldsymbol{p}_{2}$、$\boldsymbol{p}_{3}$とおくと、この四面体の内部領域は次のように表せます。
+\begin{align*}
+V=\left\{\boldsymbol{p}|\boldsymbol{p}=\boldsymbol{p}_{1}t_{1}+\boldsymbol{p}_{2}t_{2}+\boldsymbol{p}_{3}t_{3}, 0\leq t_{1}\leq 1, 0\leq t_{2}\leq 1, 0\leq t_{3}\leq 1, 0\leq t_{1}+t_{2}+t_{3}\leq 1 \right\}
+\end{align*}
+また体積要素は
+\begin{align*}
+\mathrm{d}v=\mathrm{d}x\mathrm{d}y\mathrm{d}z=[\boldsymbol{p}_{1} \boldsymbol{p}_{2} \boldsymbol{p}_{3}]\mathrm{d}t_{1}\mathrm{d}t_{2}\mathrm{d}t_{3}
+\end{align*}
+となります。ただし$[\boldsymbol{p}_{1} \boldsymbol{p}_{2} \boldsymbol{p}_{3}]$は{\bf Grassmannの記号}と呼ばれ、次式で定義されます。
+\begin{align*}
+[\boldsymbol{p}_{1} \boldsymbol{p}_{2} \boldsymbol{p}_{3}]
+=\boldsymbol{p}_{1}^{\mathrm{T}}(\boldsymbol{p}_{2}\times\boldsymbol{p}_{3})
+=\boldsymbol{p}_{2}^{\mathrm{T}}(\boldsymbol{p}_{3}\times\boldsymbol{p}_{1})
+=\boldsymbol{p}_{3}^{\mathrm{T}}(\boldsymbol{p}_{1}\times\boldsymbol{p}_{2})
+\end{align*}
+念のため、これはスカラーで、原点と$\boldsymbol{p}_{1}$、$\boldsymbol{p}_{2}$、$\boldsymbol{p}_{3}$をそれぞれ結ぶ線分を三辺とする{\bf 平行6面体の体積}になります。これ重要です。
+
+これらを慣性テンソルの定義式に当てはめれば、
+\begin{align*}
+\boldsymbol{I}
+=\int_{0}^{1}\int_{0}^{1-t_{3}}\int_{0}^{1-t_{2}-t_{3}}\rho\,\boldsymbol{J}[\boldsymbol{p}_{1} \boldsymbol{p}_{2} \boldsymbol{p}_{3}]\,\mathrm{d}t_{1}\mathrm{d}t_{2}\mathrm{d}t_{3}
+\end{align*}
+ただし
+\begin{align*}
+\boldsymbol{J}
+&=
+\left[(\boldsymbol{p}_{1}t_{1}+\boldsymbol{p}_{2}t_{2}+\boldsymbol{p}_{3}t_{3})\times\right]^{2}
+\\
+&=
+-\sum_{i=1,2,3}\left[\boldsymbol{p}_{i}\times\right]^{2}t_{i}^{2}
+-\sum_{(i,j)=(1,2),(2,3),(3,1)}\left(\left[\boldsymbol{p}_{i}\times\right]\left[\boldsymbol{p}_{j}\times\right]+\left[\boldsymbol{p}_{j}\times\right]\left[\boldsymbol{p}_{i}\times\right]\right)t_{i}t_{j}
+\end{align*}
+となります。ここで、
+\begin{align*}
+\int_{0}^{1}\int_{0}^{1-t_{3}}\int_{0}^{1-t_{2}-t_{3}}t_{i}^{2}\mathrm{d}t_{1}\mathrm{d}t_{2}\mathrm{d}t_{3}
+&=\frac{1}{60}\qquad\mbox{for}\quad \forall i=1,2,3
+\\
+\int_{0}^{1}\int_{0}^{1-t_{3}}\int_{0}^{1-t_{2}-t_{3}}t_{i}t_{j}\mathrm{d}t_{1}\mathrm{d}t_{2}\mathrm{d}t_{3}
+&=\frac{1}{120}
+\qquad\mbox{for}\quad \forall (i,j)=(1,2),(2,3),(3,1)
+\end{align*}
+なので結局、
+\begin{align*}
+\boldsymbol{I}
+=-\frac{1}{60}\rho\left\{
+\sum_{i=1,2,3}\left[\boldsymbol{p}_{i}\times\right]^{2}
++\frac{1}{2}
+\sum_{(i,j)=(1,2),(2,3),(3,1)}\left(\left[\boldsymbol{p}_{i}\times\right]\left[\boldsymbol{p}_{j}\times\right]+\left[\boldsymbol{p}_{j}\times\right]\left[\boldsymbol{p}_{i}\times\right]\right)
+\right\}[\boldsymbol{p}_{1} \boldsymbol{p}_{2} \boldsymbol{p}_{3}]
+\end{align*}
+となります。
+
+\section{Grassmannの記号の意味についてちょっと注釈}
+
+$[\boldsymbol{p}_{1} \boldsymbol{p}_{2} \boldsymbol{p}_{3}]$は原点と$\boldsymbol{p}_{1}$、$\boldsymbol{p}_{2}$、$\boldsymbol{p}_{3}$をそれぞれ結ぶ線分を三辺とする平行6面体の体積になると書きました。
+しかしベクトルの外積の性質から、$[\boldsymbol{p}_{1} \boldsymbol{p}_{2} \boldsymbol{p}_{3}]=-[\boldsymbol{p}_{1} \boldsymbol{p}_{3} \boldsymbol{p}_{2}]$となることがすぐ分かります。
+つまり、頂点の順番によって正負が入れ替わることになります。
+体積ならば値が負になるのはおかしいです。
+
+ここには、「$\boldsymbol{p}_{1}$、$\boldsymbol{p}_{2}$、$\boldsymbol{p}_{3}$をこの順で辿ったときに右ねじの法則によって決まる三角形の法線方向が多面体の外側を向く」ということが暗黙の前提にあります。
+もしこの逆、つまり右ねじの法則で決まる三角形の法線方向が多面体の内側を向く（あるいは左ねじの法則で決まる三角形の法線方向が多面体の外側を向く）ならば、$[\boldsymbol{p}_{1} \boldsymbol{p}_{2} \boldsymbol{p}_{3}]$は負の値になります。
+
+このことを逆に利用すれば、任意の多面体の慣性テンソルが容易に求まります。
+
+\section{多面体の慣性テンソル}
+
+多面体の表面が$n$個の三角形で構成されているとします（三角形が互いに重ならず、表面を埋め尽くしていることを前提にしています）。
+$i$番目の三角形と原点とで作られる四面体の慣性テンソルを$\boldsymbol{I}_{i}$とおきましょう。
+このとき、各三角形の頂点の順番は「三点をその順で辿ったときに右ねじの法則によって決まる法線方向が{\bf 多面体の外側を向く}」ように与えることにします。
+
+原点が多面体の内側にあるならば、上記の規約は先ほどの（原点を頂点に含む四面体の慣性テンソルを計算したときの）規約と同じものになるので、全ての$\boldsymbol{I}_{i}$を足せば$\boldsymbol{I}$になります。
+原点が多面体の頂点に含まれるならば、原点を頂点に含む三角形と原点とがなす四面体は体積ゼロ、慣性テンソルは$\boldsymbol{I}_{i}=\boldsymbol{O}$になります（ので存在を忘れて構いません）。
+では、原点が多面体の外側にある場合は？
+
+このときは、原点が上記法線方向と同じ側に存在する面と、逆側に存在する面が出てきます。
+後者についてはGrassmannの記号が負になります。
+前者については正になるのですが、このとき計算される$\boldsymbol{I}_{i}$は多面体の外側領域の分も含んでしまっているので、後者の分をさっぴかなくてはいけません。
+ということは、結局原点が多面体に対してどこにあろうと、全ての$\boldsymbol{I}_{i}$を足せば多面体の慣性テンソル$\boldsymbol{I}$が求まるということになります。
+つまり非常に都合が良いことに、原点が多面体に対してどこにあろうと
+\begin{align*}
+\boldsymbol{I}=\sum_{i=1}^{n}\boldsymbol{I}_{i}
+\end{align*}
+が常に成り立つわけです。
+
+\section{重心まわり慣性テンソル}
+
+本記事の冒頭に書いたことのおさらいですが、上記の式で求めた$\boldsymbol{I}$は、多面体の「原点まわり」慣性テンソルです。
+力学計算ではこれを「多面体の重心まわり慣性テンソル」$\boldsymbol{I}_{\mathrm{G}}$に変換しておくと都合が良いことが多くあるので、それを行いましょう。
+
+まず、原点および三つの頂点$\boldsymbol{p}_{i1}$、$\boldsymbol{p}_{i2}$、$\boldsymbol{p}_{i3}$からなる四面体の体積を$v_{i}$、重心を$\boldsymbol{p}_{\mathrm{G}i}$とそれぞれおきます。
+頂点の順番によっては$v_{i}$は負となるのでした。
+正確さを期すために、念のためこれを「符号付き体積」と呼び変えましょう。
+次式が成り立ちます。
+\begin{align*}
+v_{i}&=\frac{1}{6}[\boldsymbol{p}_{i1} \boldsymbol{p}_{i2} \boldsymbol{p}_{i3}]
+\\
+\boldsymbol{p}_{\mathrm{G}i}&=\frac{\displaystyle \boldsymbol{p}_{i1}+\boldsymbol{p}_{i2}+\boldsymbol{p}_{i3}}{4}
+\end{align*}
+これらを用いれば、多面体全体の体積$v$および重心$\boldsymbol{p}_{\mathrm{G}}$は次のように求まります。
+\begin{align*}
+v&=\sum_{i}^{n}v_{i}
+\\
+\boldsymbol{p}_{\mathrm{G}}&=\frac{\displaystyle\sum_{i}^{n}v_{i}\boldsymbol{p}_{\mathrm{G}i}}{\displaystyle\sum_{i}^{n}v_{i}}
+\end{align*}
+結局割り算するので、$v_{i}$は$[\boldsymbol{p}_{i1} \boldsymbol{p}_{i2} \boldsymbol{p}_{i3}]$で置き換えてしまっても（1/6倍しなくても）構いません。
+重心が求まれば{\bf 平行軸の定理}より
+\begin{align*}
+\boldsymbol{I}=\boldsymbol{I}_{\mathrm{G}}-\rho v\left[\boldsymbol{p}_{\mathrm{G}}\times\right]^{2}
+\end{align*}
+が成り立つので、
+\begin{align*}
+\boldsymbol{I}_{\mathrm{G}}=\boldsymbol{I}+\rho v\left[\boldsymbol{p}_{\mathrm{G}}\times\right]^{2}
+\end{align*}
+と求まります。
+
+\section{剛体の姿勢が変わったら？}
+
+今我々は「運動している剛体」を考えていますので、{\bf 観測座標系}から見たら多面体を構成する頂点の位置は全て時々刻々変わることになります。
+頂点はばらばらに運動しているのではなく剛体として互いに相対距離を保っていますので、運動計算するたびにこれらを毎回求めた上で慣性テンソルを再計算するのはいかにも無駄です。
+
+剛体に固定されたある座標系（{\bf 物体座標系}と呼びましょう）を考えると、その座標系の中では全ての頂点は不動ですので慣性テンソルも定数行列となります（行列じゃなくてテンソルじゃないのか、という疑問はこの際スルーさせて頂きます）。
+これを$\bar{\boldsymbol{I}}$とおきましょう。
+
+今、物体座標系から観測座標系への姿勢変換行列が$\boldsymbol{R}$であるとします。剛体が運動（回転）するとはこの$\boldsymbol{R}$が変化するということと同義です。観測座標系に対する剛体の角速度$\boldsymbol{\omega}$を{\bf 姿勢だけ}物体座標系に合わせて変換（物体座標系に対しては剛体は運動しないので角速度は$\boldsymbol{0}$となってしまうことに注意）したものを$\bar{\boldsymbol{\omega}}$とおく、つまり
+\begin{align*}
+\bar{\boldsymbol{\omega}}=\boldsymbol{R}^{\mathrm{T}}\boldsymbol{\omega}
+\end{align*}
+とおくと、角運動量は座標系に依存するベクトルですので、
+\begin{align*}
+\boldsymbol{I}\boldsymbol{\omega}=\boldsymbol{R}\bar{\boldsymbol{I}}\bar{\boldsymbol{\omega}}=\boldsymbol{R}\bar{\boldsymbol{I}}\boldsymbol{R}^{\mathrm{T}}\boldsymbol{\omega}
+\end{align*}
+が常に成り立ちます。両辺を比較すれば
+\begin{align*}
+\boldsymbol{I}=\boldsymbol{R}\bar{\boldsymbol{I}}\boldsymbol{R}^{\mathrm{T}}
+\end{align*}
+であると分かります。
+これは慣性テンソルを重心まわりのもの$\boldsymbol{I}_{\mathrm{G}}$および$\bar{\boldsymbol{I}}_{\mathrm{G}}$に置き換えても同じです。
+
+\end{document}
