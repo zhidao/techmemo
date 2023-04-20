@@ -1,0 +1,48 @@
+﻿\documentclass{jsarticle}
+
+\usepackage{amsmath,amssymb,bm}
+\usepackage{algorithm,algpseudocode}
+
+\everymath{\displaystyle}
+\pagestyle{empty}
+
+\begin{document}
+
+\setcounter{algorithm}{2}
+\begin{algorithm}[tbh]
+\caption{\textsc{DIRECT\_IdentPOR}$(\mathcal{R})\rightarrow(\mathcal{R}_{\mathrm{POR}},f_{\mathrm{min}})$}
+\label{alg:direct_ident_por}
+\begin{algorithmic}[1]
+\State $\mathcal{R}_{\mathrm{POR}}\leftarrow\emptyset$
+\State $(l_{\mathrm{min}},f_{\mathrm{min}})\leftarrow$\textsc{DIRECT\_FindMin}$(\mathcal{R})$
+\If{$l_{\mathrm{min}}=L$}
+  \State \Return{$(\mathcal{R}_{\mathrm{POR}},f_{\mathrm{min}})$}
+\EndIf
+\State $l\leftarrow 0$
+\While{$\mathcal{R}_{l}=\emptyset$}
+  \State $l\leftarrow l+1$
+\EndWhile
+\While{true}
+  \State $(\bm{\xi},f)\leftarrow$\textsc{DIRECT\_PickPOR}$(\mathcal{R},\mathcal{R}_{\mathrm{POR}};l)$
+  \State TRY:
+  \If{$l=l_{\mathrm{min}}$}
+    \State break
+  \EndIf
+  \State $g_{\mathrm{max}}\leftarrow 0$
+  \State $l^{\prime}\leftarrow l+1$
+  \For{$m\leftarrow l+1,\cdots,l_{\mathrm{min}}$}
+    \If{$\mathcal{R}_{m}\neq\emptyset$}
+      \State $g\leftarrow\frac{3^{l}\cdot(f-f^{(m)}_{1})}{1-3^{l-m}}$
+      \If{$g\geq g_{\mathrm{max}}$}
+        \State $g_{\mathrm{max}}\leftarrow g$
+        \State $l^{\prime}\leftarrow m$
+      \EndIf
+    \EndIf
+  \EndFor
+  \State $l\leftarrow l^{\prime}$
+\EndWhile
+\State \Return{$(\mathcal{R}_{\mathrm{POR}},f_{\mathrm{min}})$}
+\end{algorithmic}
+\end{algorithm}
+
+\end{document}

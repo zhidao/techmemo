@@ -1,0 +1,28 @@
+﻿\documentclass{jsarticle}
+
+\usepackage{amsmath,amssymb,bm}
+\usepackage{algorithm,algpseudocode}
+
+\everymath{\displaystyle}
+\pagestyle{empty}
+
+\begin{document}
+
+\setcounter{algorithm}{3}
+\begin{algorithm}[tbh]
+\caption{\textsc{DIRECT\_FindMin}$(\mathcal{R})\rightarrow(l_{\mathrm{min}},f_{\mathrm{min}})$}
+\label{alg:direct_find_min}
+\begin{algorithmic}[1]
+\State $l_{\mathrm{min}}\leftarrow 0$
+\State $f_{\mathrm{min}}\leftarrow f^{(0)}_{1}$
+\For{$l=1,\cdots,L$}
+  \If{$\mathcal{R}_{l}\neq\emptyset$ and $f^{(l)}_{1}<f_{\mathrm{min}}$}
+    $l_{\mathrm{min}}\leftarrow l$
+    $f_{\mathrm{min}}\leftarrow f^{(l)}_{1}$
+  \EndIf
+\EndFor
+\State \Return{$(l_{\mathrm{min}},f_{\mathrm{min}})$}
+\end{algorithmic}
+\end{algorithm}
+
+\end{document}

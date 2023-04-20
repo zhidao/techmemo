@@ -1,0 +1,32 @@
+﻿\documentclass{jsarticle}
+
+\usepackage{amsmath,amssymb,bm}
+\usepackage{algorithm,algpseudocode}
+
+\everymath{\displaystyle}
+\pagestyle{empty}
+
+\begin{document}
+
+\setcounter{algorithm}{5}
+\begin{algorithm}[tbh]
+\caption{\textsc{DIRECT}$(f)\rightarrow(\bm{x}^{*},f_{\mathrm{min}})$}
+\label{alg:direct}
+\begin{algorithmic}[1]
+\State \textsc{DIRECT\_Init}$(\mathcal{R};f)$
+\State $k\leftarrow 0$; $m\leftarrow 0$
+\While{$k<N_{\mathrm{Imax}}$ and $m<N_{\mathrm{Fmax}}$}
+  \State $(\mathcal{R}_{\mathrm{POR}},f_{\mathrm{min}})\leftarrow$\textsc{DIRECT\_IdentPOR}$(\mathcal{R})$
+  \If{$\mathcal{R}_{\mathrm{PRO}}=\emptyset$}
+    \State $\bm{x}^{*}\leftarrow\bm{x}^{(l_{\mathrm{min}})}_{\mathrm{C}1}$
+    \State \Return{$(\bm{x}^{*},f_{\mathrm{min}})$}
+  \EndIf
+  \While{$\mathcal{R}_{\mathrm{POR}}\neq\emptyset$}
+    \State $(l_{i},\bm{\xi}_{i})\in\mathcal{R}_{\mathrm{POR}}$
+    \State \textsc{DIRECT\_Divide}$(\mathcal{R};l_{i},\bm{\xi}_{i},f)$
+  \EndWhile
+\EndWhile
+\end{algorithmic}
+\end{algorithm}
+
+\end{document}

@@ -1,0 +1,24 @@
+﻿\documentclass{jsarticle}
+
+\usepackage{amsmath,amssymb,bm}
+\usepackage{algorithm,algpseudocode}
+
+\everymath{\displaystyle}
+\pagestyle{empty}
+
+\begin{document}
+
+\setcounter{algorithm}{4}
+\begin{algorithm}[tbh]
+\caption{\textsc{DIRECT\_PickPOR}$(\mathcal{R},\mathcal{R}_{\mathrm{POR}};l)\rightarrow(\bm{\xi},f)$}
+\label{alg:direct_pick_por}
+\begin{algorithmic}[1]
+\State $\bm{\xi}\leftarrow\bm{\xi}^{(l)}_{1}$
+\State $f\leftarrow f^{(l)}_{1}$
+\State $\mathcal{R}\leftarrow\mathcal{R}-\{\bm{\xi}\}$
+\State $\mathcal{R}_{\mathrm{POR}}\leftarrow\mathcal{R}_{\mathrm{POR}}\cup\{\bm{\xi}\}$
+\State \Return{$(\bm{\xi},f)$}
+\end{algorithmic}
+\end{algorithm}
+
+\end{document}

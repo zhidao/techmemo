@@ -1,0 +1,25 @@
+﻿\documentclass{jsarticle}
+
+\usepackage{amsmath,amssymb,bm}
+\usepackage{algorithm,algpseudocode}
+
+\everymath{\displaystyle}
+\pagestyle{empty}
+
+\begin{document}
+
+\setcounter{algorithm}{6}
+\begin{algorithm}[tbh]
+\caption{\textsc{DIRECT\_Init}$(\mathcal{R};f)$}
+\label{alg:direct_init}
+\begin{algorithmic}[1]
+\State $\bm{x}_{\mathrm{C}0}\leftarrow[1/2~~1/2~~\cdots~~1/2]^{\mathrm{T}}$
+\For{$j\leftarrow 1,\cdots,n$}
+  \State $l_{0j}\leftarrow 0$
+\EndFor
+\State $f_{0}\leftarrow f(\bm{x}_{\mathrm{C}0})$
+\State \textsc{DIRECT\_AddRect}$(\mathcal{R},0,\bm{\xi}_{0})$
+\end{algorithmic}
+\end{algorithm}
+
+\end{document}

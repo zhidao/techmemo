@@ -1,0 +1,42 @@
+﻿\documentclass{jsarticle}
+
+\usepackage{amsmath,amssymb,bm}
+\usepackage{algorithm,algpseudocode}
+
+\everymath{\displaystyle}
+\pagestyle{empty}
+
+\begin{document}
+
+\setcounter{algorithm}{0}
+\begin{algorithm}[tbh]
+\caption{\textsc{DIRECT\_Divide}$(\mathcal{R};l_{i},\bm{\xi}_{i},f)$}
+\label{alg:direct_divide}
+\begin{algorithmic}[1]
+\State $\mathcal{I}\leftarrow\emptyset$
+\State $d\leftarrow 3^{-l_{i}}$
+\For{$j\leftarrow 1,\cdots,n$}
+  \If{$l_{ij}=l_{i}$}
+    \State $\bm{x}_{\mathrm{C}ij+}\leftarrow\bm{x}_{\mathrm{C}i}+d\bm{e}_{j}$
+    \State $\bm{x}_{\mathrm{C}ij-}\leftarrow\bm{x}_{\mathrm{C}i}-d\bm{e}_{j}$
+    \State $f_{ij+}\leftarrow f(\bm{x}_{\mathrm{C}ij+})$
+    \State $f_{ij-}\leftarrow f(\bm{x}_{\mathrm{C}ij-})$
+    \State \textsc{InsertIndex}$(\mathcal{I};j,\min\{f_{ij+},f_{ij-}\})$
+  \EndIf
+\EndFor
+\For{$(j,w)\in\mathcal{I}$}
+  \State $l_{ij}\leftarrow l_{i}+1$
+  \State $\bm{\xi}_{ij+}\leftarrow(\bm{x}_{\mathrm{C}ij+},f_{ij+},\{l_{ij}\})$
+  \State $\bm{\xi}_{ij-}\leftarrow(\bm{x}_{\mathrm{C}ij-},f_{ij-},\{l_{ij}\})$
+  \If{$j=N_{\mathcal{I}}$}
+    \State $l_{i}\leftarrow l_{i}+1$
+  \EndIf
+  \State \textsc{DIRECT\_AddRect}$(\mathcal{R};l_{i},\bm{\xi}_{ij+})$
+  \State \textsc{DIRECT\_AddRect}$(\mathcal{R};l_{i},\bm{\xi}_{ij-})$
+\EndFor
+\State $\bm{\xi}_{i}\leftarrow(\bm{x}_{\mathrm{C}i},f_{i},\{l_{ij}\})$
+\State \textsc{DIRECT\_AddRect}$(\mathcal{R};l_{i},\bm{\xi}_{i})$
+\end{algorithmic}
+\end{algorithm}
+
+\end{document}

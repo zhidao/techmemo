@@ -52,7 +52,7 @@ Journal of Optimization Theory and Application, Vol. 79, No. 1, pp. 157--181, 19
 \begin{quote}
 J. Gablonsky, An Implementation of the {\tt DIRECT} algorithm, Technial report of North Carolina State University, 1998.
 \end{quote}
-
+なお，ZMでの実装はzm\_opt\_direct.cにあります．
 
 
 \section{探索空間の超長方形群への分割}
@@ -271,7 +271,7 @@ $L$は$l$の最大値，
 \quad\Leftrightarrow\quad
 L\leq -\log_{3}\varepsilon\leq L+1
 \quad\Rightarrow\quad
-L=\left[-\log_{3}\varepsilon\right]
+L=\lfloor -\log_{3}\varepsilon\rfloor
 \end{align*}
 とすれば良いです
 （ただし，$\lfloor x \rfloor$は$x$を超えない最大の整数を意味します）．
@@ -345,7 +345,7 @@ L=\left[-\log_{3}\varepsilon\right]
 
 \section{アルゴリズム完成}
 
-これで完成したDIRECT法のアルゴリズムを\textbf{Algorithm \ref{alg:direct}}に示します．
+DIRECT法のアルゴリズムを\textbf{Algorithm \ref{alg:direct}}に示します．
 
 \begin{algorithm}[tbh]
 \caption{\textsc{DIRECT}$(f)\rightarrow(\bm{x}^{*},f_{\mathrm{min}})$}
@@ -379,6 +379,5 @@ L=\left[-\log_{3}\varepsilon\right]
 \State \textsc{DIRECT\_AddRect}$(\mathcal{R},0,\bm{\xi}_{0})$
 \end{algorithmic}
 \end{algorithm}
-
 
 \end{document}

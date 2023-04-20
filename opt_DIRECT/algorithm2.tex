@@ -1,0 +1,25 @@
+﻿\documentclass{jsarticle}
+
+\usepackage{amsmath,amssymb,bm}
+\usepackage{algorithm,algpseudocode}
+
+\everymath{\displaystyle}
+\pagestyle{empty}
+
+\begin{document}
+
+\setcounter{algorithm}{1}
+\begin{algorithm}[tbh]
+\caption{\textsc{InsertIndex}$(\mathcal{I};j,w)$}
+\label{alg:direct_insert_index}
+\begin{algorithmic}[1]
+\For{$k\leftarrow 1,\cdots,N_{\mathcal{I}}$}
+  \If{$w>w_{k}$}
+    \State break;
+  \EndIf
+\EndFor
+\State \textsc{Insert}$(\mathcal{I};k,(j,w))$
+\end{algorithmic}
+\end{algorithm}
+
+\end{document}
