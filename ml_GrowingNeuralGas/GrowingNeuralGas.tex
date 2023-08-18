@@ -1,0 +1,313 @@
+﻿\documentclass{jsarticle}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{ascmac}
+\usepackage{algorithm,algpseudocode}
+\usepackage{graphicx}
+\usepackage{url}
+
+\flushbottom
+\sloppy
+
+\setlength{\paperwidth}{210mm}
+\setlength{\paperheight}{297mm}
+\setlength{\voffset}{0mm}
+\setlength{\textwidth}{\paperwidth}
+\addtolength{\textwidth}{-30mm}
+\setlength{\textheight}{\paperheight}
+\addtolength{\textheight}{-50mm}
+\setlength{\topmargin}{-1in}
+\addtolength{\topmargin}{20mm}
+\setlength{\headheight}{0mm}
+\setlength{\headsep}{0mm}
+\setlength{\footskip}{20mm}
+\setlength{\oddsidemargin}{-1in}
+\addtolength{\oddsidemargin}{15mm}
+\setlength{\columnsep}{7mm}
+
+\title{\Large {\bf Growing Neural Gas -- 自己組織的にクラスタ形成するネットワーク}}
+\author{杉原知道}
+
+\begin{document}
+%\thispagestyle{empty}
+
+\maketitle
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{前書き}
+
+時間方向にコンシステントな物体認識方法を考えている時に見つけて面白そうだったので，
+要点整理しつつZMに実装してみました．
+オリジナル文献は次のものです．
+
+Bernd Fritzke, A Growing Neural Gas Learns Topology, in Proceedings of the 7th International Conference on Neural Information Processing Systems, pp. 625--632, 1994.
+
+\url{https://proceedings.neurips.cc/paper/1994/file/d56b9fc4b0f1be8871f5e1c40c0067e7-Paper.pdf}
+
+本記事で紹介しているアルゴリズムは，上記文献に示されているものよりも少しだけ効率が良くなっています．
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Neural Gasが表現するもの}
+
+``Neural Gas''とは不思議な名前ですが，
+一般的なニューラルネットと違いネットワークを構成するノードやエッジが計算過程で{\bf 拡大・揮発}するため，
+このように名付けられているようです．
+
+ある未知のシステムを観測したとき，
+なんらかの確率分布に従って標本群$\mathcal{X}=\{\bm{x}_{i}\}$（$i=1,\cdots,N$）が得られるとします．
+たとえば床に箱が幾つか置かれたシーンを3次元計測した際，
+箱や床の表面付近の点が高確率で観測されるような状況です．
+この標本群からシステムがどのような形状をしているか推定したい，
+しかも単なる点群としてではなく，
+{\bf システムの位相構造}（{\bf トポロジー}，上記の例では箱の隣接関係）も知りたいという場合に
+使えるよう考えられたのがGrowing Neural Gasです．
+$\mathcal{X}$が（最初から揃ってはおらず）逐次取得される場合にも適用できるので，
+オンライン処理に向いています．
+
+基本的な処理は，
+初期標本（二つで十分）に基づいて作成した小規模ネットワークを追加標本に基づいて移動・成長させつつ，
+一方で一定の寿命を迎えたネットワーク構成要素を削除し規模の爆発を抑制する，
+という流れになります．
+ネットワーク構造が位相構造を表現します．
+ただし，
+マクロな位相構造（上記の例では何個の箱がどのように重なっているかなど）を直接表現するものではないので，
+その点は注意が必要です．
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Neural Gasのデータ構造}
+
+ネットワークは，ユニットとエッジから成る無向グラフの形態をとります．
+$i$番目ユニットを$\mathrm{s}_{i}$，
+二つのユニット$\mathrm{s}_{i}$および$\mathrm{s}_{j}$を結ぶエッジを$E_{i,j}$とそれぞれ表すことにします．
+ユニット$\mathrm{s}_{i}$は
+座標$\bm{v}_{i}$，\textbf{累積誤差}$e_{i}$，自分を起点とするエッジ群$\mathcal{E}_{i}$の三者をメンバーに持ちます．
+\begin{align*}
+\mathrm{s}_{i}=\left(\bm{v}_{i}, e_{i}, \mathcal{E}_{i}\right)
+\end{align*}
+また，エッジ$E_{i,j}$は両端ユニットのほかに\textbf{齢}$a_{i,j}$をメンバーに持ちます．
+\begin{align*}
+E_{i,j}=\left(\mathrm{s}_{i}, \mathrm{s}_{j}, a_{i,j}\right)
+\end{align*}
+エッジは方向を持たないものとします．
+したがって$E_{i,j}\equiv E_{j,i}$です．
+累積誤差と齢については，アルゴリズムの中で説明します．
+
+全てのユニットの集合を$\mathcal{S}$，全てのエッジの集合を$\mathcal{E}$と表すことにしましょう．
+念のため，どちらの集合も要素の重複を許さないものとします．
+つまり，$E_{i,j}\in\mathcal{E}$ならば$E_{j,i}\notin\mathcal{E}$です．
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{アルゴリズム}
+
+観測によって標本を一つ得る関数\textsc{Sample}$(P)$を用意します．
+$P$はシステムの確率分布です．
+これを用いて二つのユニット$\mathrm{s}_{1}$，$\mathrm{s}_{2}$を座標が重複しないように作成し，
+結合して初期ネットワークを作成します．
+両ユニットの累積誤差はともに0とします．
+
+\begin{algorithm}[tbh]
+\caption{\textsc{InitNetwork}$(P)\rightarrow(\mathcal{S},\mathcal{E})$}
+\begin{algorithmic}[1]
+\State $\bm{v}_{1}\leftarrow\mbox{\textsc{Sampling}}(P)$
+\Repeat
+  \State $\bm{v}_{2}\leftarrow\mbox{\textsc{Sampling}}(P)$
+\Until $\bm{v}_{2}\neq\bm{v}_{1}$
+\State $\mathrm{s}_{1}\leftarrow\left(\bm{v}_{1},0,\emptyset\right)$
+\State $\mathrm{s}_{2}\leftarrow\left(\bm{v}_{2},0,\emptyset\right)$
+\State $\mathcal{S}\leftarrow\left\{\mathrm{s}_{1}, \mathrm{s}_{2}\right\}$
+\State $\mathcal{E}\leftarrow\emptyset$
+\State $\mathcal{E}\leftarrow$\textsc{Connect}$\left(\mathrm{s}_{1}, \mathrm{s}_{2};\mathcal{E}\right)$
+\State {\bf return} $(\mathcal{S}, \mathcal{E})$
+\end{algorithmic}
+\end{algorithm}
+
+\textsc{Connect}$\left(\mathrm{s}_{i}, \mathrm{s}_{j};\mathcal{E}\right)$は
+$\mathrm{s}_{i}$，$\mathrm{s}_{j}$を結合する操作です．
+全てのエッジ集合$\mathcal{E}$とともに，
+個々のユニットが持つエッジ群$\mathcal{E}_{i}$，$\mathcal{E}_{j}$も更新します．
+新たに作成されたエッジの齢は0です．
+
+\begin{algorithm}[tbh]
+\caption{\textsc{Connect}$\left(\mathrm{s}_{i}, \mathrm{s}_{j};\mathcal{E}\right)$}
+\begin{algorithmic}[1]
+\State $E_{i,j}\leftarrow\left(\mathrm{s}_{i}, \mathrm{s}_{j}, 0\right)$
+\If{$E_{i,j}\notin\mathcal{E}$}
+\State $\mathcal{E}_{i}\leftarrow\mathcal{E}_{i}\cup\left\{E_{i,j}\right\}$
+\State $\mathcal{E}_{j}\leftarrow\mathcal{E}_{j}\cup\left\{E_{i,j}\right\}$
+\State $\mathcal{E}\leftarrow\mathcal{E}\cup\left\{E_{i,j}\right\}$
+\EndIf
+\end{algorithmic}
+\end{algorithm}
+
+
+
+
+標本$\bm{v}$が与えられたとき，
+ネットワークはいきなりユニットを増やすのではなく，
+まずは既存のユニット配置を修正します．
+具体的には，$\bm{v}$に最も近い座標を持つユニット$\mathrm{s}_{f}$
+および二番目に近い座標を持つユニット$\mathrm{s}_{s}$を見つけ，
+\begin{enumerate}
+\item{$\|\bm{v}-\bm{v}_{f}\|^{2}$を累積誤差$e_{f}$に足し込む}
+\item{$\bm{v}_{f}$を$\bm{v}$に向かって微小距離延ばす}
+\item{$\mathcal{E}_{f}$の全ての要素（エッジ）$E_{f,j}$について，
+\begin{enumerate}
+ \item{$\bm{v}_{j}$を$\bm{v}$に向かって延ばす}
+ \item{$j=s$ならば齢$a_{f,s}$を0にする．さもなければ$a_{f,j}$を1増やす}
+\end{enumerate}
+}
+\item{$\mathrm{s}_{f}$と$\mathrm{s}_{s}$が結合されていなければこれらを結合する}
+\end{enumerate}
+という処理を行います．
+
+\begin{algorithm}[tbh]
+\caption{\textsc{AdaptNetwork}$(P,\mathcal{S};\mathcal{E})$}
+\begin{algorithmic}[1]
+\State $\bm{v}\leftarrow$\textsc{Sample}$(P)$
+\State $(\mathrm{s}_{f}, \mathrm{s}_{s})\leftarrow$\textsc{Proximity2}$(\mathcal{S}, \bm{v})$
+\State $e_{f}\leftarrow e_{f} + \|\bm{v}-\bm{v}_{f}\|^{2}$
+\State $\bm{v}_{f}\leftarrow\bm{v}_{f}+\varepsilon_{1}(\bm{v}-\bm{v}_{f})$
+\For{$\forall E_{f,j}\in\mathcal{E}_{f}$}
+  \State $\bm{v}_{j}\leftarrow\bm{v}_{j}+\varepsilon_{2}(\bm{v}-\bm{v}_{j})$
+  \If{$j=s$}
+    \State $a_{f,j}=0$
+  \Else
+    \State $a_{f,j}\leftarrow a_{f,j}+1$
+  \EndIf
+\EndFor
+\If{$E_{f,s}\notin\mathcal{E}_{f}$}
+  \State $\mathcal{E}\leftarrow$\textsc{Connect}$(\mathrm{s}_{f},\mathrm{s}_{s};\mathcal{E})$
+\EndIf
+\end{algorithmic}
+\end{algorithm}
+
+この処理の結果，
+齢が一定値$a_{\mathrm{max}}$を超えたエッジは削除します．
+また，それによりエッジが無くなったユニットも削除します．
+\textsc{Disconnect}は二つのユニット$\mathrm{s}_{i}$と$\mathrm{s}_{j}$の結合を削除する処理です．
+
+\begin{algorithm}[tbh]
+\caption{\textsc{RemoveAgedNetwork}$(\mathcal{S},\mathcal{E})$}
+\begin{algorithmic}[1]
+\For{$\forall E_{i,j}\in\mathcal{E}$}
+  \If{$a_{i,j}>a_{\mathrm{max}}$}
+    \State \textsc{Disconnect}$(\mathrm{s}_{i}, \mathrm{s}_{j}; \mathcal{S},\mathcal{E})$
+  \EndIf
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[tbh]
+\caption{\textsc{Disconnect}$(\mathrm{s}_{i},\mathrm{s}_{j}; \mathcal{S},\mathcal{E})$}
+\begin{algorithmic}[1]
+\State $\mathcal{E}_{i}\leftarrow\mathcal{E}_{i}-\left\{E_{i,j}\right\}$
+\If{$\mathcal{E}_{i}=\emptyset$}
+  \State $\mathcal{S}\leftarrow\mathcal{S}-\left\{\mathrm{s}_{i}\right\}$
+\EndIf
+\State $\mathcal{E}_{j}\leftarrow\mathcal{E}_{j}-\left\{E_{i,j}\right\}$
+\If{$\mathcal{E}_{j}=\emptyset$}
+  \State $\mathcal{S}\leftarrow\mathcal{S}-\left\{\mathrm{s}_{j}\right\}$
+\EndIf
+\State $\mathcal{E}\leftarrow\mathcal{E}-\left\{E_{i,j}\right\}$
+\end{algorithmic}
+\end{algorithm}
+
+これら二つの処理を$\lambda$回繰り返し，
+累積誤差が最大となったユニット$\mathrm{s}_{p}$，
+その$\mathrm{s}_{p}$に隣接する中で累積誤差が最大のユニット$\mathrm{s}_{n}$を選んで，
+両者の間に新たにユニットを挿入します．
+
+\begin{algorithm}[tbh]
+\caption{\textsc{GrowNetwork}$(\mathcal{S},\mathcal{E})$}
+\begin{algorithmic}[1]
+\State $\mathrm{s}_{p}\leftarrow$\textsc{FindPivotUnit}$(\mathcal{S})$
+\State $\mathrm{s}_{n}\leftarrow$\textsc{FindSeedUnit}$(\mathrm{s}_{p})$
+\State $\bm{v}_{r}\leftarrow\frac{1}{2}\left(\bm{v}_{p}+\bm{v}_{n}\right)$
+\State $e_{p}\leftarrow\alpha e_{p}$
+\State $e_{n}\leftarrow\alpha e_{n}$
+\State $\mathrm{s}_{r}\leftarrow\left(\bm{v}_{r},e_{p},(\mathcal{E}_{r}=\emptyset)\right)$
+\State $\mathcal{S}\leftarrow\mathcal{S}\cup\left\{\mathrm{s}_{r}\right\}$
+\State \textsc{Connect}$\left(\mathrm{s}_{p}, \mathrm{s}_{r};\mathcal{E}\right)$
+\State \textsc{Connect}$\left(\mathrm{s}_{n}, \mathrm{s}_{r};\mathcal{E}\right)$
+\State \textsc{Disconnect}$\left(\mathrm{s}_{p}, \mathrm{s}_{n};\mathcal{E}\right)$
+\For{$\forall s_{i}\in\mathcal{S}$}
+  \State $e_{i}\leftarrow\beta e_{i}$
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[tbh]
+\caption{\textsc{MetabolizeNetwork}$(\mathcal{S},\mathcal{E})$}
+\begin{algorithmic}[1]
+\For{$k=1,\cdots,\lambda$}
+  \State \textsc{AdaptNetwork}$(\mathcal{S},\mathcal{E})$
+  \State \textsc{RemoveAgedNetwork}$(\mathcal{S},\mathcal{E})$
+\EndFor
+\State \textsc{GrowNetwork}$(\mathcal{S},\mathcal{E})$
+\end{algorithmic}
+\end{algorithm}
+
+上記の\textsc{MetabolizeNetwork}$(\mathcal{S},\mathcal{E})$を繰り返すのがGrowing Neural Gasの骨子です．
+終了判定の規範は明示されておらず，
+オンライン処理の場合は延々と継続されることになります．
+
+処理全体の働きは次のように説明できます．
+\textsc{AdaptNetwork}は，
+ネットワーク全体を観測された標本に適応させる効果を持っています．
+累積誤差が大きいことは，
+そのユニットが観測された標本群を説明するのにあまり貢献していないということを意味するので，
+\textsc{GrowNetwork}によってその近辺に積極的に新たなユニットを発生させるわけです．
+これは逐次添加法による誘導Delaunay三角形分割に近い働きを持ちます．
+\textsc{RemoveAgedNetwork}は，移動が盛んなユニットをDelauney三角形分割から除外するために必要です．
+
+幾つかハイパーパラメータがありますが，
+オリジナル論文では
+$\lambda=100$，
+$\varepsilon_{1}=0.2$，
+$\varepsilon_{2}=0.006$，
+$\alpha=0.5$，
+$a_{\mathrm{max}}=50$，
+$\beta=0.995$
+が採用されています．
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{試験と所感}
+
+Growing Neural GasをZMのzm\_gng.cに実装し，試してみました．
+テストコードはexample/mca/gng\_test.cにあります．
+サンプルデータは$x$-$y$平面上の(0,0)-(10,10)の範囲で乱数的に3点とり，
+それぞれを中心に半径1.5程度の円の内部に乱数的に500点配置することで作成しました．
+関数\textsc{Sample}$(P)$は，単純にこれらの点のうち一つを一様乱数で選択し返すものとしました．
+ハイパーパラメータは$\lambda$のみ10とし，
+それ以外はオリジナル論文で採用されている値と同じにしました．
+
+トータルで1500個の点があるので，
+\textsc{MetabolizeNetwork}を1500回反復し，
+その計算過程を可視化してみたものが下の図です．
+500回目くらいまでは良い感じにネットワークがクラスタを覆っていきますが，
+段々とオーバーフィッティングしていっています．
+クラスタ間を結ぶ橋のようなエッジが発生するかどうかは割と確率的で，
+完全に切れてしまう場合もそこそこあります．
+クラスタが明確に分離している場合，
+一度切れた橋が復活することはほとんど無いようです．
+
+計算過程でのユニット数およびエッジ数の変化もプロットしてみました．
+ユニット数はほとんど直線的に増加しているように見えます．
+\textsc{Sample}$(P)$が単純な設計なので，孤立したユニットが発生しないことが恐らくの原因です．
+エッジ数の増え方は一定ではありませんが，
+やはり単調に増加しています．
+ネットワーク爆発を防ぐためには，
+全ユニット数を一定値に抑えるなど積極的な対策を講じなければならなそうです．
+
+動的クラスタリングは別の機会に改めて試してみたいと思います．
+
+
+
+\end{document}
