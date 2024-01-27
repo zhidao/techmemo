@@ -3,6 +3,7 @@
 
  - ml_EM_algorithm : K-means、EMアルゴリズム
  - ml_GrowingNeuralGas : Growing Neural Gasアルゴリズム
+ - ml_RANSAC : RANSACアルゴリズム
 
 --------------------------------------------------------------------
 ### 【最適化】
