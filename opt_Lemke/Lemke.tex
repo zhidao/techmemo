@@ -1,0 +1,492 @@
+\documentclass[a4paper]{jsarticle}
+
+\usepackage{amsmath,amssymb,bm}
+\usepackage{graphicx}
+\usepackage{ascmac}
+\usepackage{algorithm,algpseudocode}
+\everymath{\displaystyle}
+
+\title{相補掃き出し法（Lemke法） --- 線形相補性問題と凸2次計画問題の解法}
+
+\begin{document}
+\maketitle
+
+\section{線形相補性問題とは}
+
+{\bf 線形相補性問題（Linear Complementary Problem, LCP）}とは，次の条件を満たす変数$\boldsymbol{z}$を求める問題です．
+\begin{align*}
+\boldsymbol{0}\leq\boldsymbol{z}\perp\boldsymbol{M}\boldsymbol{z}+\boldsymbol{p}\geq\boldsymbol{0}
+\end{align*}
+ただし，
+$\boldsymbol{M}$は非負定値対称行列，$\boldsymbol{p}$は定数ベクトルです．
+あるいは次のようにも書けます．
+\begin{align*}
+\boldsymbol{w}=\boldsymbol{M}\boldsymbol{z}+\boldsymbol{p},\quad
+\boldsymbol{w}\geq\boldsymbol{0},\quad
+\boldsymbol{z}\geq\boldsymbol{0},\quad
+\boldsymbol{w}^{\mathrm{T}}\boldsymbol{z}=0
+\end{align*}
+$\boldsymbol{w}=[w_{1}~\cdots~w_{n}]^{\mathrm{T}}$と$\boldsymbol{z}=[z_{1}~\cdots~z_{n}]^{\mathrm{T}}$
+（$n$は$\boldsymbol{z}$の次元数）は同数の成分を持ちますが，
+$\boldsymbol{w}\geq\boldsymbol{0}$かつ$\boldsymbol{z}\geq\boldsymbol{0}$なので，
+$\boldsymbol{w}^{\mathrm{T}}\boldsymbol{z}=0$となるためには
+$w_{i}$と$z_{i}$（$\forall i\in\{1,\cdots,n\}$）のどちらか一方は必ず0になる，
+ということが「相補性」の意味です．
+ちょっと変わったクラスの問題に見えるかも知れませんが，
+後ほど記すように，
+ポピュラーな凸2次計画問題も双対性に基づいて線形相補性問題に等価変換できるので，
+わりと様々な事例がこのように表せます．
+
+
+{\bf 相補掃き出し法}（{\bf Complementary Pivotting Method}, {\bf Lemke法}）は，
+線形相補性問題の標準的解法なのですが，
+その説明がウェブ上になかなか見当たらないので自分で書くことにしました．
+なお，本記事の作成にあたって次の書籍を参考にしました．
+
+\begin{screen}
+岩波講座応用数学[方法7] 最適化法，藤田 宏，今野 浩，田邉 國士著，岩波書店，1994
+\end{screen}
+
+
+\section{相補掃き出し法のアルゴリズム}
+
+まず，次の集合$\mathcal{Q}$を定義します．
+\begin{align*}
+\mathcal{Q}=\left\{(\boldsymbol{w},\boldsymbol{z})\left|
+\boldsymbol{w}-\boldsymbol{M}\boldsymbol{z}=\boldsymbol{p},\boldsymbol{w}\geq\boldsymbol{0}, \boldsymbol{z}\geq\boldsymbol{0}
+\right.\right\}
+\end{align*}
+$\mathcal{Q}$の元のうち
+条件$\boldsymbol{w}^{\mathrm{T}}\boldsymbol{z}=0$を満たすものが線形相補性問題の解です．
+もし$\boldsymbol{p}\geq\boldsymbol{0}$ならば，
+$\boldsymbol{w}=\boldsymbol{p}$，$\boldsymbol{z}=\boldsymbol{0}$は自明解となることに注意して下さい．
+以降では$\boldsymbol{p}\ngeq\boldsymbol{0}$を仮定します．
+
+天下り的ですが，ここで人為変数$v$を新たに導入して，
+上記の$\mathcal{Q}$と似た次の集合$\tilde{\mathcal{Q}}$を定義します．
+\begin{align*}
+\tilde{\mathcal{Q}}=\left\{(\boldsymbol{w},\boldsymbol{z},v)\left|
+\boldsymbol{w}-\boldsymbol{M}\boldsymbol{z}-v\boldsymbol{l}=\boldsymbol{p}, \boldsymbol{w}\geq\boldsymbol{0}, \boldsymbol{z}\geq\boldsymbol{0}, v\geq 0
+\right.\right\}
+\end{align*}
+ただし，
+$\boldsymbol{l}\overset{\mathrm{def}}{=}[1~\cdots~1]^{\mathrm{T}}$とおきました．
+$(\boldsymbol{w},\boldsymbol{z},0)\in\tilde{\mathcal{Q}}$であれば$(\boldsymbol{w},\boldsymbol{z})\in\mathcal{Q}$であることは，
+すぐにご理解頂けるともの思います．
+ここで，$\boldsymbol{p}=[p_{1}~\cdots~p_{n}]^{\mathrm{T}}$に対し
+$s=\mathop{\mathrm{arg~min}}_{i}\left\{p_{i}\right\}$とおけば，
+$(\boldsymbol{w},\boldsymbol{z},v)=(\boldsymbol{p}-p_{s}\boldsymbol{l},\boldsymbol{0},-p_{s})$は$\tilde{\mathcal{Q}}$の元となり
+（$\boldsymbol{p}\ngeq\boldsymbol{0}$を仮定しているので$-p_{s}>0$です），
+かつ$\boldsymbol{w}^{\mathrm{T}}\boldsymbol{z}=0$を満たします．
+この操作によって，今度は$w_{s}$が$0$になりますので，
+それと相補関係にある$z_{s}$を$0$から増やしても$\boldsymbol{w}^{\mathrm{T}}\boldsymbol{z}=0$は維持されることになります．
+
+上記のことを，次のような表（タブロー）を作ってもう一度考えてみます．
+\begin{align*}
+\left|\begin{array}{c|c|c|c|c|c|c|c|c|c|c|c|c|c|c}
+1      & 2      & \cdots & s-1    & s      & s+1    & \cdots & n      & n+1       & \cdots & n+s       & \cdots & 2n        & 2n+1   & \\
+\hline
+1      & 0      &        & 0      & 0      & 0      &        & 0      & -m_{11}    &        & -m_{1s}    & \cdots & -m_{1n}    & -1     & p_{1} \\
+0      & 1      &        & \vdots & \vdots & \vdots &        &        & \vdots    &        & \vdots    &        & \vdots    & \vdots & \vdots \\
+       & 0      &        & 0      &        &        &        &        &           &        &           &        &           &        &        \\
+       &        &        & 1      & 0      &        &        &        & -m_{(s-1)1} &        & -m_{(s-1)s} &        & -m_{(s-1)n} & -1     & p_{s-1} \\
+\vdots & \vdots & \cdots & 0      & 1      & 0      & \cdots & \vdots & -m_{s1}    & \cdots & -m_{ss}    & \cdots & -m_{sn}    & -1     & p_{s} \\
+       &        &        &        & 0      & 1      &        &        & -m_{(s+1)1} &        & -m_{(s+1)s} &        & -m_{(s+1)n} & -1     & p_{s+1} \\
+       &        &        & \vdots &        & 0      &        &        & \vdots    &        & \vdots    &        & \vdots    & \vdots & \vdots \\
+       &        &        &        & \vdots & \vdots &        & 0      &           &        &           &        &           &        &        \\
+0      & 0      &        & 0      & 0      & 0      &        & 1      & -m_{n1}    &        & -m_{ns}    &        & -m_{nn}    & -1     & p_{n} \\
+\end{array}\right|
+\end{align*}
+ただし，
+$m_{ij}$は$\boldsymbol{M}$の$i$行目$j$列目成分です．
+$1\sim n$列目が$\boldsymbol{w}$に，
+$n+1\sim 2n$列目が$\boldsymbol{z}$に，
+$2n+1$列目が$v$にそれぞれ対応します．
+最右列は$\boldsymbol{p}$です．
+$s=\mathop{\mathrm{arg~min}}_{i}\left\{p_{i}\right\}$を求め，
+$s$行$2n+1$列目を軸として掃き出しを行うと，次のようになります．
+\begin{align*}
+\left|\begin{array}{c|c|c|c|c|c|c|c|c|c|c|c|c|c|c}
+1      & 2      & \cdots & s-1    & s      & s+1    & \cdots & n      & n+1            & \cdots & n+s            & \cdots & 2n             & 2n+1   & \\
+\hline
+1      & 0      &        & 0      &-1      & 0      &        & 0      & m_{s1}-m_{11}    &        & m_{ss}-m_{1s}    & \cdots & m_{sn}-m_{1n}    & 0      & p_{1}-p_{s} \\
+0      & 1      &        & \vdots & \vdots & \vdots &        &        & \vdots         &        & \vdots         &        & \vdots         & \vdots & \vdots \\
+       & 0      &        & 0      &        &        &        &        &                &        &                &        &                &        &        \\
+       &        &        & 1      &-1      &        &        &        & m_{s1}-m_{(s-1)1} &        & m_{ss}-m_{(s-1)s} &        & m_{sn}-m_{(s-1)n} & 0      & p_{s-1}-p_{s} \\
+\vdots & \vdots & \cdots & 0      &-1      & 0      & \cdots & \vdots & m_{s1}          & \cdots & m_{ss}          & \cdots & m_{sn}          & 1      &-p_{s} \\
+       &        &        &        &-1      & 1      &        &        & m_{s1}-m_{(s+1)1} &        & m_{ss}-m_{(s+1)s} &        & m_{sn}-m_{(s+1)n} & 0      & p_{s+1}-p_{s} \\
+       &        &        & \vdots &        & 0      &        &        & \vdots         &        & \vdots         &        & \vdots         & \vdots & \vdots \\
+       &        &        &        & \vdots & \vdots &        & 0      &                &        &                &        &                &        &        \\
+0      & 0      &        & 0      &-1      & 0      &        & 1      & m_{s1}-m_{n1}    &        & m_{ss}-m_{ns}    &        & m_{sn}-m_{nn}    & 0      & p_{n}-p_{s} \\
+\end{array}\right|
+\end{align*}
+そして，
+$2n+1$列目を$s$列目に，
+$s$列目を$n+s$列目に，
+$n+s$列目を$2n+1$列目にそれぞれ移動します．
+\begin{align*}
+\left|\begin{array}{c|c|c|c|c|c|c|c|c|c|c|c|c|c|c}
+1      & 2      & \cdots & s-1    & 2n+1   & s+1    & \cdots & n      & n+1            & \cdots & s      & \cdots & 2n             & n+s            & \\
+\hline
+1      & 0      &        & 0      & 0      & 0      &        & 0      & m_{s1}-m_{11}    &        & -1     & \cdots & m_{sn}-m_{1n}    & m_{ss}-m_{1s}    & p_{1}-p_{s} \\
+0      & 1      &        & \vdots & \vdots & \vdots &        &        & \vdots         &        & \vdots &        & \vdots         & \vdots         & \vdots \\
+       & 0      &        & 0      &        &        &        &        &                &        &        &        &                &                &        \\
+       &        &        & 1      & 0      &        &        &        & m_{s1}-m_{(s-1)1} &        & -1     &        & m_{sn}-m_{(s-1)n} & m_{ss}-m_{(s-1)s} & p_{s-1}-p_{s} \\
+\vdots & \vdots & \cdots & 0      & 1      & 0      & \cdots & \vdots & m_{s1}          & \cdots & -1     & \cdots & m_{sn}          & m_{ss}          &-p_{s} \\
+       &        &        &        & 0      & 1      &        &        & m_{s1}-m_{(s+1)1} &        & -1     &        & m_{sn}-m_{(s+1)n} & m_{ss}-m_{(s+1)s} & p_{s+1}-p_{s} \\
+       &        &        & \vdots &        & 0      &        &        & \vdots         &        & \vdots &        & \vdots         & \vdots         & \vdots \\
+       &        &        &        & \vdots & \vdots &        & 0      &                &        &        &        &                &                &        \\
+0      & 0      &        & 0      & 0      & 0      &        & 1      & m_{s1}-m_{n1}    &        & -1     &        & m_{sn}-m_{nn}    & m_{ss}-m_{ns}    & p_{n}-p_{s} \\
+\end{array}\right|
+\end{align*}
+これで，列の入れ替えは起こったものの形式的には最初と同じ形になりました．
+左から$n$列目までの部分は単位行列となっており，最右列の成分が全て$0$以上なので，
+\begin{itemize}
+\item $w_{i}=p_{i}-p_{s}$（$i=1,\cdots,s-1,s+1,\cdots,n$），$v=-p_{s}$，$w_{s}=z_{i}=0$（$i=1,\cdots,n$，$i\neq s$）が$\tilde{\mathcal{Q}}$の元
+\item $w_{s}=0$なので，$z_{s}$は非負となる範囲で自由に値を変えられる
+\end{itemize}
+というのがこの表の読み方です．
+
+このことを一般化して考えてみましょう．
+$\boldsymbol{w}$，$\boldsymbol{z}$，$v$をまとめて
+$\boldsymbol{q}=[\boldsymbol{w}^{\mathrm{T}}~\boldsymbol{z}^{\mathrm{T}}~v]^{\mathrm{T}}=[q_{1}~\cdots~q_{2n+1}]^{\mathrm{T}}$とおきます．
+これらが，次の式を満たす変数群$\boldsymbol{q}_{\mathrm{B}}$，$\boldsymbol{q}_{\mathrm{N}}$，$q_{\mathrm{D}}$に分けられる状況を考えます．
+\begin{align*}
+\boldsymbol{q}_{\mathrm{B}}+\boldsymbol{H}\boldsymbol{q}_{\mathrm{N}}+q_{\mathrm{D}}\boldsymbol{d}=\boldsymbol{r}
+\end{align*}
+ただし，
+$\boldsymbol{H}$は定数行列，
+$\boldsymbol{d}$は定数ベクトル，
+$\boldsymbol{r}$は全ての成分が非負の定数ベクトルで，
+$\boldsymbol{q}_{\mathrm{B}}$と$\boldsymbol{q}_{\mathrm{N}}$はともに$n$次ベクトルであるものとします．
+$\boldsymbol{q}_{\mathrm{B}}$を{\bf 基底変数}，
+$\boldsymbol{q}_{\mathrm{N}}$を{\bf 非基底変数}，
+$q_{\mathrm{D}}$を{\bf 駆動変数}とそれぞれ呼びます．
+$\boldsymbol{q}_{\mathrm{B}}$と$\boldsymbol{q}_{\mathrm{N}}$，$q_{\mathrm{D}}$のインデックスの集合を
+$\mathcal{I}_{\mathrm{B}}=\left\{i_{\mathrm{B}1},\cdots,i_{\mathrm{B}n}\right\}$，
+$\mathcal{I}_{\mathrm{N}}=\left\{i_{\mathrm{N}1},\cdots,i_{\mathrm{N}n}\right\}$，
+$\mathcal{I}_{\mathrm{D}}=\left\{i_{\mathrm{D}}\right\}$とそれぞれおき，
+\begin{align*}
+\boldsymbol{q}_{\mathrm{B}}=\begin{bmatrix}
+q_{i_{\mathrm{B}1}} \\
+ \vdots       \\
+q_{i_{\mathrm{B}n}} \\
+\end{bmatrix}
+,\quad
+\boldsymbol{q}_{\mathrm{N}}=\begin{bmatrix}
+q_{i_{\mathrm{N}1}} \\
+ \vdots       \\
+q_{i_{\mathrm{N}n}} \\
+\end{bmatrix}
+,\quad
+\boldsymbol{H}=\begin{bmatrix}
+h_{1} & \cdots & h_{1n} \\
+ \vdots        & \ddots & \vdots \\
+h_{n1} & \cdots & h_{nn} \\
+\end{bmatrix}
+,\quad
+\boldsymbol{d}=\begin{bmatrix}
+d_{1} \\
+ \vdots       \\
+d_{n} \\
+\end{bmatrix}
+,\quad
+\boldsymbol{r}=\begin{bmatrix}
+r_{1} \\
+ \vdots       \\
+r_{n} \\
+\end{bmatrix}
+\end{align*}
+と成分表示すると，タブローは次のように書けます．
+\begin{align*}
+\left|\begin{array}{c|c|c|c|c|c|c|c|c|c|c|c|c|c|c}
+i_{\mathrm{B}1} & i_{\mathrm{B}2} & \cdots & i_{\mathrm{B}(s-1)} & i_{\mathrm{B}s} & i_{\mathrm{B}(s+1)} & \cdots & i_{\mathrm{B}n} & i_{\mathrm{N}1} & \cdots & i_{\mathrm{N}s} & \cdots & i_{\mathrm{N}n} & i_{\mathrm{D}} & \\
+\hline
+1      & 0      &        & 0      & 0      & 0      &        & 0      & h_{11}    &        & h_{1s}    & \cdots & h_{1n}    & d_{1}   & r_{1} \\
+0      & 1      &        & \vdots & \vdots & \vdots &        &        & \vdots   &        & \vdots   &        & \vdots   & \vdots & \vdots \\
+       & 0      &        & 0      &        &        &        &        &          &        &          &        &          &        &        \\
+       &        &        & 1      & 0      &        &        &        & h_{(s-1)1} &        & h_{(s-1)s} &        & h_{(s-1)n} & d_{s-1}  & r_{s-1} \\
+\vdots & \vdots & \cdots & 0      & 1      & 0      & \cdots & \vdots & h_{s1}    & \cdots & h_{ss}    & \cdots & h_{sn}    & d_{s}   & r_{s} \\
+       &        &        &        & 0      & 1      &        &        & h_{(s+1)1} &        & h_{(s+1)s} &        & h_{(s+1)n} & d_{s+1}  & r_{s+1} \\
+       &        &        & \vdots &        & 0      &        &        & \vdots   &        & \vdots   &        & \vdots   & \vdots & \vdots \\
+       &        &        &        & \vdots & \vdots &        & 0      &          &        &          &        &          &        &        \\
+0      & 0      &        & 0      & 0      & 0      &        & 1      & h_{n1}    &        & h_{ns}    &        & h_{nn}    & d_{n}   & r_{n} \\
+\end{array}\right|
+\end{align*}
+軸をどのように選ぶかはいったん置いておくとして，
+$s$行目$i_{\mathrm{D}}$列目に選んで掃き出しを行うと，次のようになります．
+\begin{align*}
+\left|\begin{array}{c|c|c|c|c|c|c|c|c|c|c|c|c|c|c}
+i_{\mathrm{B}1} & i_{\mathrm{B}2} & \cdots & i_{\mathrm{B}(s-1)} & i_{\mathrm{B}s} & i_{\mathrm{B}(s+1)} & \cdots & i_{\mathrm{B}n} & i_{\mathrm{N}1} & \cdots & i_{\mathrm{N}s} & \cdots & i_{\mathrm{N}n} & i_{\mathrm{D}} & \\
+\hline
+1      & 0      &        & 0      &-d_{1}/d_{s}  & 0      &        & 0      & h_{11}^{\prime}    &        & h_{1s}^{\prime}    & \cdots & h_{1n}^{\prime}    & 0      & r_{1}^{\prime} \\
+0      & 1      &        & \vdots & \vdots      & \vdots &        &        & \vdots          &        & \vdots          &        & \vdots          & \vdots & \vdots \\
+       & 0      &        & 0      &             &        &        &        &                 &        &                 &        &                 &        &        \\
+       &        &        & 1      &-d_{s-1}/d_{s} &        &        &        & h_{(s-1)1}^{\prime} &        & h_{(s-1)s}^{\prime} &        & h_{(s-1)n}^{\prime} & 0      & r_{s-1}^{\prime} \\
+\vdots & \vdots & \cdots & 0      & 1/d_{s}      & 0      & \cdots & \vdots & h_{s1}^{\prime}    & \cdots & h_{ss}^{\prime}    & \cdots & h_{sn}^{\prime}    & 1      & r_{s}^{\prime} \\
+       &        &        &        &-d_{s+1}/d_{s} & 1      &        &        & h_{(s+1)1}^{\prime} &        & h_{(s+1)s}^{\prime} &        & h_{(s+1)n}^{\prime} & 0      & r_{s+1}^{\prime} \\
+       &        &        & \vdots &             & 0      &        &        & \vdots          &        & \vdots          &        & \vdots          & \vdots & \vdots \\
+       &        &        &        & \vdots      & \vdots &        & 0      &                 &        &                 &        &                 &        &        \\
+0      & 0      &        & 0      &-d_{n}/d_{s}  & 0      &        & 1      & h_{n1}^{\prime}    &        & h_{ns}^{\prime}    &        & h_{nn}^{\prime}    & 0      & r_{n}^{\prime} \\
+\end{array}\right|
+\end{align*}
+ただし，
+\begin{align*}
+h_{ij}^{\prime}&=h_{ij}-(d_{i}/d_{s})h_{sj} \quad (i=1,\cdots,n, i\neq s) \\
+h_{sj}^{\prime}&=h_{sj}/d_{s} \\
+r_{i}^{\prime}&=r_{i}-(d_{i}/d_{s})r_{s} \\
+r_{s}^{\prime}&=r_{s}/d_{s}
+\end{align*}
+とおきました．
+このように変形しても$r_{i}^{\prime}\geq 0$（$i=1,\cdots,n$）が満たされるためには，
+$s=\mathop{\mathrm{arg~min}}_{i}\left\{\left.r_{i}/d_{i}\right|d_{i}>0 \right\}$でなければなりません．
+もし全ての$i=1,\cdots,n$に対して$d_{i}\leq 0$ならば，元の相補性問題に解は無いということになので，計算を停止します．
+
+軸となる$s$が見つかり上記の掃き出しを行ったら，
+$i_{\mathrm{D}}$列目を$i_{\mathrm{B}s}$列目に，
+$i_{\mathrm{B}s}$列目を$i_{\mathrm{N}s}$列目に，
+$i_{\mathrm{N}s}$列目を$i_{\mathrm{D}}$列目にそれぞれ移動します．
+\begin{align*}
+\left|\begin{array}{c|c|c|c|c|c|c|c|c|c|c|c|c|c|c}
+i_{\mathrm{B}1} & i_{\mathrm{B}2} & \cdots & i_{\mathrm{D}} & i_{\mathrm{B}s} & i_{\mathrm{B}(s+1)} & \cdots & i_{\mathrm{B}n} & i_{\mathrm{N}1} & \cdots & i_{\mathrm{B}s} & \cdots & i_{\mathrm{N}n} & i_{\mathrm{N}s} & \\
+\hline
+1      & 0      &        & 0      & 0           & 0      &        & 0      & h_{11}^{\prime}    &        &-d_{1}/d_{s}    & \cdots & h_{1n}^{\prime} & h_{1s}^{\prime}  & r_{1}^{\prime} \\
+0      & 1      &        & \vdots & \vdots      & \vdots &        &        & \vdots          &        & \vdots          &        & \vdots          & \vdots & \vdots \\
+       & 0      &        & 0      &             &        &        &        &                 &        &                 &        &                 &        &        \\
+       &        &        & 1      & 0           &        &        &        & h_{(s-1)1}^{\prime} &        &-d_{s-1}/d_{s}     &        & h_{(s-1)n}^{\prime} & h_{(s-1)s}^{\prime} & r_{s-1}^{\prime} \\
+\vdots & \vdots & \cdots & 0      & 1      & 0      & \cdots & \vdots & h_{s1}^{\prime}    & \cdots & 1/d_{s}   & \cdots & h_{sn}^{\prime}    & h_{ss}^{\prime}     & r_{s}^{\prime} \\
+       &        &        &        & 0 & 1      &        &        & h_{(s+1)1}^{\prime} &        &-d_{s+1}/d_{s} &        & h_{(s+1)n}^{\prime} & h_{(s+1)s}^{\prime}     & r_{s+1}^{\prime} \\
+       &        &        & \vdots &             & 0      &        &        & \vdots          &        & \vdots          &        & \vdots          & \vdots & \vdots \\
+       &        &        &        & \vdots      & \vdots &        & 0      &                 &        &                 &        &                 &        &        \\
+0      & 0      &        & 0      & 0  & 0      &        & 1      & h_{n1}^{\prime}    &        &-d_{n}/d_{s}   &        & h_{nn}^{\prime}    & h_{ns}^{\prime}   & r_{n}^{\prime} \\
+\end{array}\right|
+\end{align*}
+その上で，
+\begin{align*}
+\mathcal{I}_{\mathrm{B}}\leftarrow \mathcal{I}_{\mathrm{B}}/\left\{i_{\mathrm{B}s}\right\}\cup\left\{i_{\mathrm{D}}\right\} \\
+\mathcal{I}_{\mathrm{N}}\leftarrow \mathcal{I}_{\mathrm{N}}/\left\{i_{\mathrm{N}s}\right\}\cup\left\{i_{\mathrm{B}s}\right\} \\
+\mathcal{I}_{\mathrm{D}}\leftarrow \mathcal{I}_{\mathrm{D}}/\left\{i_{\mathrm{D}}\right\}\cup\left\{i_{\mathrm{B}s}\right\}
+\end{align*}
+とすれば，形式的に最初と同じ形になります．
+これにより新たに非基底となった変数インデックス$i_{\mathrm{B}s}$が$2n+1$ならば，
+$q_{i_{\mathrm{B}s}}=v=0$ということになるので，
+このときの$\left(\boldsymbol{w},\boldsymbol{z}\right)=\left(\left[q_{1}~\cdots~q_{n}\right]^{\mathrm{T}},\left[q_{n+1}~\cdots~q_{2n}\right]^{\mathrm{T}}\right)$は
+$\mathcal{Q}$の元となり，かつ$\boldsymbol{w}^{\mathrm{T}}\boldsymbol{z}=0$を満たす，
+すなわちこれが元の相補性問題の解であるということになります．
+
+以上をまとめれば，相補掃き出し法のアルゴリズムは次のようになります．
+
+\begin{algorithm}[tbh]
+\caption{\textsc{ComplementaryPivottingMethod}$(\boldsymbol{M},\boldsymbol{p})\rightarrow\boldsymbol{z}$}
+\label{alg:direct_divide}
+\begin{algorithmic}[1]
+\State $s\leftarrow\mathop{\mathrm{arg~min}}_{i}\left\{p_{i}\right\}$
+\If{$p_{s}\geq 0$}
+  \State {\bf Return} $\boldsymbol{0}$
+\EndIf
+\State \textsc{InitTableau}$(\boldsymbol{M},\boldsymbol{p})\rightarrow(\mathcal{T},\mathcal{I}_{\mathrm{B}},\mathcal{I}_{\mathrm{N}},\mathcal{I}_{\mathrm{D}})$
+\State \textsc{Sweep}$(s;\mathcal{T},\mathcal{I}_{\mathrm{B}},\mathcal{I}_{\mathrm{N}},\mathcal{I}_{\mathrm{D}})$
+\State \textsc{SwapIndex}$(s;\mathcal{I}_{\mathrm{B}},\mathcal{I}_{\mathrm{N}},\mathcal{I}_{\mathrm{D}})$
+\Repeat
+  \State $s\leftarrow$\textsc{FindPivot}$(\mathcal{T},\mathcal{I}_{\mathrm{D}})$
+  \If{$s=$nil}
+    \State {\bf Return} false
+  \EndIf
+  \State \textsc{Sweep}$(s;\mathcal{T},\mathcal{I}_{\mathrm{B}},\mathcal{I}_{\mathrm{N}},\mathcal{I}_{\mathrm{D}})$
+  \State \textsc{SwapIndex}$(s;\mathcal{I}_{\mathrm{B}},\mathcal{I}_{\mathrm{N}},\mathcal{I}_{\mathrm{D}})$
+\Until{$2n+1\notin\mathcal{I}_{\mathrm{N}}$}
+\State {\bf Return} \textsc{BuildAnswer}$(\boldsymbol{p},\mathcal{I}_{\mathrm{B}})$
+\end{algorithmic}
+\end{algorithm}
+
+\textsc{InitTableau}$(\boldsymbol{M},\boldsymbol{p})$はタブローを初期化する処理，
+\textsc{Sweep}$(s;\mathcal{T},\mathcal{I}_{\mathrm{B}},\mathcal{I}_{\mathrm{N}},\mathcal{I}_{\mathrm{D}})$はタブローの$s$行目$i_{\mathrm{D}}$列目を軸として掃き出しを行う処理，
+\textsc{SwapIndex}$(s;\mathcal{I}_{\mathrm{B}},\mathcal{I}_{\mathrm{N}},\mathcal{I}_{\mathrm{D}})$は基底・非基底・駆動変数インデックスを入れ替える処理，
+\textsc{FindPivot}$(\mathcal{T},\mathcal{I}_{\mathrm{D}})$は軸を見つける処理，
+\textsc{BuildAnswer}$(\boldsymbol{p},\mathcal{I}_{\mathrm{B}})$は$\boldsymbol{p}$と$\mathcal{I}_{\mathrm{B}}$から解$\boldsymbol{z}$を構成する処理です．
+
+
+
+\section{2次計画問題から線形相補性問題への等価変換}
+
+冒頭に述べた通り，凸2次計画問題も双対性に基づいて線形相補性問題に等価変換できます．
+これを示しましょう．
+
+次の凸2次計画問題を考えます．
+\begin{align*}
+\boldsymbol{x}^{*}=\mathop{\mathrm{arg~min}}_{\boldsymbol{x}}\left\{
+\left.
+z=\frac{1}{2}\boldsymbol{x}^{\mathrm{T}}\boldsymbol{Q}\boldsymbol{x}+\boldsymbol{c}^{\mathrm{T}}\boldsymbol{x}
+\right|
+\boldsymbol{A}\boldsymbol{x}\geq\boldsymbol{b},
+\boldsymbol{x}\geq\boldsymbol{0}
+\right\}
+\end{align*}
+ただし，$\boldsymbol{Q}$は実対称非負定値行列，$\boldsymbol{A}$は定数行列，$\boldsymbol{c}$と$\boldsymbol{b}$はどちらも定数ベクトルです．
+
+まず，$\boldsymbol{x}^{*}$が存在するならば，次を満たす$\boldsymbol{\lambda}$も存在します．
+\begin{align*}
+\boldsymbol{\mu}^{\mathrm{T}}\boldsymbol{x}^{*}=0, \quad
+\boldsymbol{y}^{\mathrm{T}}\boldsymbol{\lambda}=0, \quad
+\boldsymbol{\mu}\geq\boldsymbol{0}, \quad
+\boldsymbol{y}\geq\boldsymbol{0}, \quad
+\boldsymbol{x}^{*}\geq\boldsymbol{0}, \quad
+\boldsymbol{\lambda}\geq\boldsymbol{0}
+\end{align*}
+ただし，
+\begin{align*}
+\boldsymbol{\mu}\overset{\mathrm{def}}{=}\boldsymbol{Q}\boldsymbol{x}^{*}-\boldsymbol{A}^{\mathrm{T}}\boldsymbol{\lambda}+\boldsymbol{c} \\
+\boldsymbol{y}\overset{\mathrm{def}}{=}\boldsymbol{A}\boldsymbol{x}^{*}-\boldsymbol{b} \\
+\end{align*}
+とおきました．
+証明は次の通りです．
+$\boldsymbol{A}(\boldsymbol{x}^{*}+\boldsymbol{\varepsilon})\geq\boldsymbol{b}$および$\boldsymbol{x}^{*}+\boldsymbol{\varepsilon}\geq\boldsymbol{0}$を満たす
+任意の微小なベクトル$\boldsymbol{\varepsilon}$を考えると，
+$z$は$\boldsymbol{x}=\boldsymbol{x}^{*}$において最小となるので，
+\begin{align*}
+\left.z\right|_{\boldsymbol{x}=\boldsymbol{x}^{*}+\boldsymbol{\varepsilon}}\geq\left.z\right|_{\boldsymbol{x}=\boldsymbol{x}^{*}}
+\end{align*}
+すなわち
+\begin{align*}
+\frac{1}{2}\boldsymbol{\varepsilon}^{\mathrm{T}}\boldsymbol{Q}\boldsymbol{\varepsilon}+
+(\boldsymbol{c}+\boldsymbol{Q}\boldsymbol{x}^{*})^{\mathrm{T}}\boldsymbol{\varepsilon}\geq 0
+\end{align*}
+となるはずです．これが満たされるためには
+\begin{align*}
+(\boldsymbol{c}+\boldsymbol{Q}\boldsymbol{x}^{*})^{\mathrm{T}}\boldsymbol{\varepsilon}\geq 0
+\end{align*}
+でなければなりません．
+ここで，$\boldsymbol{\varepsilon}$についての線形計画問題
+\begin{align*}
+\boldsymbol{\varepsilon}^{*}=\mathop{\mathrm{arg~min}}_{\boldsymbol{\varepsilon}}\left\{
+w=(\boldsymbol{c}+\boldsymbol{Q}\boldsymbol{x}^{*})^{\mathrm{T}}\boldsymbol{\varepsilon}
+\left|
+\boldsymbol{A}\boldsymbol{\varepsilon}\geq-\boldsymbol{y},
+\boldsymbol{\varepsilon}\geq-\boldsymbol{x}^{*}
+\right.
+\right\}
+\end{align*}
+を考えると，
+$\boldsymbol{\varepsilon}=\boldsymbol{0}$は明らかにこの問題の実行可能解です．
+このとき$w=0$ですが，上記より$w\geq 0$ですので，
+$\boldsymbol{\varepsilon}=\boldsymbol{0}$はこの問題の最適解となっている，
+つまり$\boldsymbol{\varepsilon}^{*}=\boldsymbol{0}$であると分かります．
+したがって同時に，上記の線形計画問題の双対問題
+\begin{align*}
+(\boldsymbol{\lambda},\boldsymbol{\mu})=\mathop{\mathrm{arg~min}}_{(\boldsymbol{\lambda},\boldsymbol{\mu})}\left\{
+\boldsymbol{y}^{\mathrm{T}}\boldsymbol{\lambda}+\boldsymbol{x}^{*\mathrm{T}}\boldsymbol{\mu}
+\left|
+\boldsymbol{A}^{\mathrm{T}}\boldsymbol{\lambda}+\boldsymbol{\mu}=\boldsymbol{c}+\boldsymbol{Q}\boldsymbol{x}^{*},
+\boldsymbol{\lambda}\geq\boldsymbol{0},
+\boldsymbol{\mu}\geq\boldsymbol{0}
+\right.
+\right\}
+\end{align*}
+も最適解を持ち，
+しかもそれは$\boldsymbol{y}^{\mathrm{T}}\boldsymbol{\lambda}+\boldsymbol{x}^{*\mathrm{T}}\boldsymbol{\mu}=0$を満たすと分かります．
+$\boldsymbol{y}\geq\boldsymbol{0}$，
+$\boldsymbol{\lambda}\geq\boldsymbol{0}$，
+$\boldsymbol{x}^{*}\geq\boldsymbol{0}$，
+$\boldsymbol{\mu}\geq\boldsymbol{0}$ですので，
+結局$\boldsymbol{y}^{\mathrm{T}}\boldsymbol{\lambda}=0$かつ$\boldsymbol{x}^{*\mathrm{T}}\boldsymbol{\mu}=0$が成り立つことになります（証明終わり）．
+
+逆に，上記を満たす$\boldsymbol{\lambda}$が存在するならば$\boldsymbol{x}^{*}$は元の凸2次計画問題の最適解となります．
+証明は次の通りです．
+\begin{align*}
+z-\left.z\right|_{\boldsymbol{x}=\boldsymbol{x}^{*}}
+=
+\frac{1}{2}(\boldsymbol{x}-\boldsymbol{x}^{*})^{\mathrm{T}}\boldsymbol{Q}(\boldsymbol{x}-\boldsymbol{x}^{*})
++(\boldsymbol{c}+\boldsymbol{Q}\boldsymbol{x}^{*})^{\mathrm{T}}(\boldsymbol{x}-\boldsymbol{x}^{*})
+\end{align*}
+であるので，常に
+\begin{align*}
+z-\left.z\right|_{\boldsymbol{x}=\boldsymbol{x}^{*}}
+\geq
+(\boldsymbol{c}+\boldsymbol{Q}\boldsymbol{x}^{*})^{\mathrm{T}}(\boldsymbol{x}-\boldsymbol{x}^{*})
+\end{align*}
+が言えます．
+$\boldsymbol{x}$が元の問題の実行可能解ならば，$\boldsymbol{A}\boldsymbol{x}\geq\boldsymbol{b}$，$\boldsymbol{x}\geq\boldsymbol{0}$，$\boldsymbol{\mu}\geq\boldsymbol{0}$，$\boldsymbol{\mu}^{\mathrm{T}}\boldsymbol{x}^{*}=0$かつ
+\begin{align*}
+\boldsymbol{c}+\boldsymbol{Q}\boldsymbol{x}^{*}=\boldsymbol{A}^{\mathrm{T}}\boldsymbol{\lambda}+\boldsymbol{\mu}
+\end{align*}
+ですので，
+\begin{align*}
+z-\left.z\right|_{\boldsymbol{x}=\boldsymbol{x}^{*}}
+\geq
+(\boldsymbol{A}^{\mathrm{T}}\boldsymbol{\lambda}+\boldsymbol{\mu})^{\mathrm{T}}(\boldsymbol{x}-\boldsymbol{x}^{*})
+=\boldsymbol{\lambda}^{\mathrm{T}}\boldsymbol{A}(\boldsymbol{x}-\boldsymbol{x}^{*})
++\boldsymbol{\mu}^{\mathrm{T}}\boldsymbol{x}-\boldsymbol{\mu}^{\mathrm{T}}\boldsymbol{x}^{*}
+\\
+\geq-\boldsymbol{\lambda}^{\mathrm{T}}(\boldsymbol{A}\boldsymbol{x}^{*}-\boldsymbol{b})=-\boldsymbol{\lambda}^{\mathrm{T}}\boldsymbol{y}=0
+\end{align*}
+すなわち
+\begin{align*}
+z\geq\left.z\right|_{\boldsymbol{x}=\boldsymbol{x}^{*}}
+\end{align*}
+となります（証明終わり）．
+
+以上より，
+元の凸2次計画問題を解くことは，
+\begin{align*}
+\boldsymbol{\mu}=\boldsymbol{Q}\boldsymbol{x}^{*}-\boldsymbol{A}^{\mathrm{T}}\boldsymbol{\lambda}+\boldsymbol{c} \\
+\boldsymbol{y}=\boldsymbol{A}\boldsymbol{x}^{*}-\boldsymbol{b} \\
+\boldsymbol{\mu}^{\mathrm{T}}\boldsymbol{x}^{*}=0, \quad
+\boldsymbol{y}^{\mathrm{T}}\boldsymbol{\lambda}=0 \\
+\boldsymbol{\mu}\geq\boldsymbol{0}, \quad
+\boldsymbol{y}\geq\boldsymbol{0}, \quad
+\boldsymbol{x}^{*}\geq\boldsymbol{0}, \quad
+\boldsymbol{\lambda}\geq\boldsymbol{0}
+\end{align*}
+を満たす$\boldsymbol{x}$と$\boldsymbol{\lambda}^{*}$の組を求めることと等価であると分かります．
+これは実は
+\begin{align*}
+\boldsymbol{w}\overset{\mathrm{def}}{=}\begin{bmatrix}
+\boldsymbol{\mu} \\ \boldsymbol{y}
+\end{bmatrix}, \quad
+\boldsymbol{z}\overset{\mathrm{def}}{=}\begin{bmatrix}
+\boldsymbol{x}^{*} \\ \boldsymbol{\lambda}
+\end{bmatrix}, \quad
+\boldsymbol{M}\overset{\mathrm{def}}{=}\begin{bmatrix}
+\boldsymbol{Q} & -\boldsymbol{A}^{\mathrm{T}} \\
+\boldsymbol{A} & \boldsymbol{O}
+\end{bmatrix}, \quad
+\boldsymbol{p}\overset{\mathrm{def}}{=}\begin{bmatrix}
+\boldsymbol{c} \\ -\boldsymbol{b}
+\end{bmatrix}
+\end{align*}
+とおいたときに，本記事冒頭に示した線形相補性問題になっています．
+
+変数に非負条件$\boldsymbol{x}\geq\boldsymbol{0}$が課されない場合は，
+二つの非負ベクトル$\boldsymbol{x}_{+}\geq\boldsymbol{0}$，$\boldsymbol{x}_{-}\geq\boldsymbol{0}$を用いて$\boldsymbol{x}=\boldsymbol{x}_{+}-\boldsymbol{x}_{-}$とおけば良いです．
+すなわち
+\begin{align*}
+\boldsymbol{x}^{*}&=\mathop{\mathrm{arg~min}}_{\boldsymbol{x}}\left\{
+\left.
+z=\frac{1}{2}(\boldsymbol{x}_{+}-\boldsymbol{x}_{-})^{\mathrm{T}}\boldsymbol{Q}(\boldsymbol{x}_{+}-\boldsymbol{x}_{-})+\boldsymbol{c}^{\mathrm{T}}(\boldsymbol{x}_{+}-\boldsymbol{x}_{-})
+\right|
+\boldsymbol{A}(\boldsymbol{x}_{+}-\boldsymbol{x}_{-})\geq\boldsymbol{b},
+\boldsymbol{x}_{+}\geq\boldsymbol{0},
+\boldsymbol{x}_{-}\geq\boldsymbol{0}
+\right\}
+\\
+&=\mathop{\mathrm{arg~min}}_{\boldsymbol{x}}\left\{
+\left.
+z=\frac{1}{2}\tilde{\boldsymbol{x}}^{\mathrm{T}}\tilde{\boldsymbol{Q}}\tilde{\boldsymbol{x}}+\tilde{\boldsymbol{c}}^{\mathrm{T}}\tilde{\boldsymbol{x}}
+\right|
+\tilde{\boldsymbol{A}}\tilde{\boldsymbol{x}}\geq\boldsymbol{b},
+\tilde{\boldsymbol{x}}\geq\boldsymbol{0}
+\right\}
+\\
+\tilde{\boldsymbol{x}}\overset{\mathrm{def}}{=}\begin{bmatrix} \boldsymbol{x}_{+}^{\mathrm{T}} & \boldsymbol{x}_{-}^{\mathrm{T}}\end{bmatrix}^{\mathrm{T}}
+\\
+\tilde{\boldsymbol{Q}}\overset{\mathrm{def}}{=}\begin{bmatrix} \boldsymbol{Q} & -\boldsymbol{Q} \\ -\boldsymbol{Q} & \boldsymbol{Q} \end{bmatrix}
+\\
+\tilde{\boldsymbol{c}}\overset{\mathrm{def}}{=}\begin{bmatrix} \boldsymbol{c}^{\mathrm{T}} & -\boldsymbol{c}^{\mathrm{T}} \end{bmatrix}^{\mathrm{T}}
+\\
+\tilde{\boldsymbol{A}}\overset{\mathrm{def}}{=}\begin{bmatrix} \boldsymbol{A} & -\boldsymbol{A} \end{bmatrix}
+\end{align*}
+と変形することで，相補掃き出し法を適用できます．
+
+
+
+\end{document}
