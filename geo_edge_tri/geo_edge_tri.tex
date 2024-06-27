@@ -1,0 +1,335 @@
+﻿\documentclass[a4paper]{jsarticle}
+\usepackage[dvips]{graphicx}
+\usepackage{svg}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{algorithm,algpseudocode}
+
+\flushbottom
+\sloppy
+
+%%% paper size = A4
+\setlength{\paperwidth}{210mm}
+\setlength{\paperheight}{297mm}
+
+%%% truncate offset
+\setlength{\voffset}{0mm}
+\setlength{\hoffset}{0mm}
+
+%%% text bounding size
+\setlength{\textwidth}{\paperwidth}
+\addtolength{\textwidth}{-30mm}
+\setlength{\textheight}{\paperheight}
+\addtolength{\textheight}{-60mm}
+
+%%% text margin
+\setlength{\topmargin}{-1in}
+\addtolength{\topmargin}{20mm}
+\setlength{\headheight}{0mm}
+\setlength{\headsep}{0mm}
+\setlength{\footskip}{10mm}
+
+%\setlength{\oddsidemargin}{-30pt}
+\setlength{\oddsidemargin}{-1in}
+\addtolength{\oddsidemargin}{15mm}
+\setlength{\columnsep}{7mm}
+
+\everymath{\displaystyle}
+
+\title{\bf Zeoの幾何要素（直線・線分・平面・三角形）基本計算}
+\author{\Large{\bf 杉原 知道}}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-\baselineskip}
+
+\begin{figure}[h]
+\begin{center}
+\includesvg[height=.3\textheight]{fig/line_edge_plane_tri.svg}
+\label{fig:line_edge_plane_tri}
+\caption{直線・線分・平面・三角形と点の関係}
+\end{center}
+\end{figure}
+
+\section{直線}
+
+直線$\mathrm{L}$は，その直線が通るある一点の位置ベクトル$\bm{p}_{0}$と単位方向ベクトル$\bm{d}$で表します（$\mathrm{L}\{\bm{p}_{0},\bm{d}\}$）．
+次のメソッドが用意されています．
+
+\noindent{\tt zLine2D/3DCreateTwoPoints}
+{\bf 2点$\bm{p}_{1}$，$\bm{p}_{2}$を通る直線$\mathrm{L}\left<\bm{p}_{1},\bm{p}_{2}\right>$} 
+
+$\mathrm{L}\left<\bm{p}_{1},\bm{p}_{2}\right>
+=\mathrm{L}\left\{\bm{p}_{1},\frac{\bm{p}_{2}-\bm{p}_{1}}{\|\bm{p}_{2}-\bm{p}_{1}\|}\right\}$
+
+\noindent{\tt zLine2D/3DPoint}
+{\bf $\mathrm{L}$上の点$\bm{p}(k;\mathrm{L})$（パラメータ$k$）}
+
+$\bm{p}(k;\mathrm{L})=\bm{p}_{0}+k\bm{d}$
+
+\noindent{\tt zLine2D/3DProjPoint}
+{\bf ある点$\bm{p}$の$\mathrm{L}$への射影$\bm{p}_{\mathrm{P}}(\bm{p};\mathrm{L})$}
+
+$\bm{p}_{\mathrm{P}}(\bm{p};\mathrm{L})=\bm{p}(\bm{d}^{\mathrm{T}}\varDelta\bm{p};\mathrm{L})$
+（ただし，$\varDelta\bm{p}\overset{\mathrm{def}}{=}\bm{p}-\bm{p}_{0}$）
+
+\noindent{\tt zLine2D/3DDistFromPoint}
+{\bf ある点$\bm{p}$と$\mathrm{L}$との距離$d(\bm{p};\mathrm{L})$}
+
+$d(\bm{p};\mathrm{L})=\|\varDelta\bm{p}\times\bm{d}\|$
+
+\noindent{\tt zLine2D/3DPointIsOn}
+{\bf ある点$\bm{p}$が$\mathrm{L}$上に載っているか否か（マージン$d_{\mathrm{m}}$）}
+
+$d(\bm{p};\mathrm{L})\leq d_{\mathrm{m}}$
+
+\noindent{\tt zIntersectLine2D}
+{\bf 2直線$\mathrm{L}_{1}\{\bm{p}_{10},\bm{d}_{1}\}$，$\mathrm{L}_{2}\{\bm{p}_{20},\bm{d}_{2}\}$の交点$\bm{p}_{\mathrm{X}}(\mathrm{L}_{1},\mathrm{L}_{2})$}（2Dのみ）
+
+$\bm{p}_{\mathrm{X}}(\mathrm{L}_{1},\mathrm{L}_{2})=\bm{p}(\bm{p}_{10}+s\bm{d}_{1})$
+（ただし，$[s~~t]^{\mathrm{T}}=\left[\bm{d}_{1}~~-\bm{d}_{2}\right]^{-1}(\bm{p}_{20}-\bm{p}_{10})$）
+
+\noindent{\tt zLine3DCommonPerpEnd}
+{\bf 2直線$\mathrm{L}_{1}\{\bm{p}_{10},\bm{d}_{1}\}$，$\mathrm{L}_{2}\{\bm{p}_{20},\bm{d}_{2}\}$の共通垂線の両端点$(\bm{p}_{\mathrm{P}1}, \bm{p}_{\mathrm{P}2})(\mathrm{L}_{1},\mathrm{L}_{2})$}（3Dのみ）
+
+$(\bm{p}_{\mathrm{P}1}, \bm{p}_{\mathrm{P}2})(\mathrm{L}_{1},\mathrm{L}_{2})=\begin{cases}
+(\bm{p}(s;\mathrm{L}_{1}),\bm{p}(t;\mathrm{L}_{2})) & (D\geq\varepsilon\mbox{のとき}) \\
+(\bm{p}_{10},\bm{p}_{\mathrm{P}}(\bm{p}_{10};\mathrm{L}_{2})) & (D<\varepsilon\mbox{のとき})
+\end{cases}$．
+ただし，
+\begin{align*}
+r_{11}&=\bm{d}_{1}^{\mathrm{T}}\bm{d}_{1} \\
+r_{12}&=\bm{d}_{1}^{\mathrm{T}}\bm{d}_{2} \\
+r_{22}&=\bm{d}_{2}^{\mathrm{T}}\bm{d}_{2} \\
+D&=r_{11}r_{22}-r_{12}^{2} \\
+s&=(r_{12}\bm{d}_{2}-r_{22}\bm{d}_{1})^{\mathrm{T}}(\bm{p}_{20}-\bm{p}_{10})/D \\
+t&=(r_{11}\bm{d}_{2}-r_{12}\bm{d}_{1})^{\mathrm{T}}(\bm{p}_{20}-\bm{p}_{10})/D
+\end{align*}
+
+\noindent{\tt zLine3DCommonPerp}
+{\bf 2直線$\mathrm{L}_{1}\{\bm{p}_{10},\bm{d}_{1}\}$，$\mathrm{L}_{2}\{\bm{p}_{20},\bm{d}_{2}\}$の共通垂線}（3Dのみ）
+
+$\mathrm{L}\left<\bm{p}_{\mathrm{P}1},\bm{p}_{\mathrm{P}2}\right>$
+
+\noindent{\tt zDistLine3DLine3D}
+{\bf 2直線$\mathrm{L}_{1}\{\bm{p}_{10},\bm{d}_{1}\}$，$\mathrm{L}_{2}\{\bm{p}_{20},\bm{d}_{2}\}$間の距離$d(\mathrm{L}_{1},\mathrm{L}_{2})$}（3Dのみ）
+
+$d(\mathrm{L}_{1},\mathrm{L}_{2})=\|\bm{p}_{\mathrm{P}1}-\bm{p}_{\mathrm{P}2}\|$
+
+
+\section{線分}
+
+線分$\mathrm{E}$は，その両端点の位置ベクトル$\bm{p}_{1}$，$\bm{p}_{2}$で表します（$\mathrm{E}\{\bm{p}_{1},\bm{p}_{2}\}$）．
+内部変数として結合ベクトル$\bm{v}\overset{\mathrm{def}}{=}\bm{p}_{2}-\bm{p}_{1}$を保持します．
+次のメソッドが用意されています．
+
+\noindent{\tt zEdge2D/3DLen}
+{\bf $\mathrm{E}$の長さ$l(\mathrm{E})$}
+
+$l(\mathrm{E})=\|\bm{v}\|$
+
+\noindent{\tt zEdge2D/3DDir}
+{\bf $\mathrm{E}$の単位方向ベクトル$\bm{d}(\mathrm{E})$}
+
+$\bm{d}(\mathrm{E})=\bm{v}/l(\mathrm{E})$
+
+\noindent{\tt zEdge2D/3DToLine}
+{\bf $\mathrm{E}$の同一直線$\mathrm{L}\left\{\mathrm{E}\right\}$}
+
+$\mathrm{L}\left\{\mathrm{E}\right\}=\mathrm{L}\left<\bm{p}_{1},\bm{p}_{2}\right>$
+
+\noindent{\tt zEdge2D/3DProjPoint}
+{\bf ある点$\bm{p}$の$\mathrm{E}$の同一直線への射影$\bm{p}_{\mathrm{P}}(\bm{p};\mathrm{E})$}
+
+$\bm{p}_{\mathrm{P}}(\bm{p};\mathrm{E})=\bm{p}_{\mathrm{P}}(\bm{p};\mathrm{L}\left\{\mathrm{E}\right\})$
+
+\noindent{\tt zEdge2D/3DClosest}
+{\bf ある点$\bm{p}$の$\mathrm{E}$上の近接点$\bm{p}_{\mathrm{C}}(\bm{p};\mathrm{E})$}
+
+$\bm{p}_{\mathrm{C}}(\bm{p};\mathrm{E})=\begin{cases}
+\bm{p}_{1} & (s<0) \\
+\bm{p}_{\mathrm{P}}(\bm{p};\mathrm{E}) & (0\leq s\leq l(\mathrm{E})) \\
+\bm{p}_{2} & (s>l(\mathrm{E}))
+\end{cases}$
+（ただし，$s=\bm{d}(\mathrm{E})^{\mathrm{T}}\varDelta\bm{p}$，
+$\varDelta\bm{p}\overset{\mathrm{def}}{=}\bm{p}-\bm{p}_{1}$）
+
+\noindent{\tt zEdge2D/3DPointIsOn}
+{\bf ある点$\bm{p}$が$\mathrm{E}$上に載っているか否か（マージン$d_{\mathrm{m}}$）}
+
+$\bm{p}_{\mathrm{C}}(\bm{p};\mathrm{E})<d_{\mathrm{m}}$
+
+\noindent{\tt zEdge2D/3DContigVert}
+{\bf ある点$\bm{p}$に近い端点$\bm{p}_{\mathrm{CV}}(\bm{p};\mathrm{E})$}
+
+$\bm{p}_{\mathrm{CV}}(\bm{p};\mathrm{E})=\begin{cases}
+\bm{p}_{1} & (\|\bm{p}-\bm{p}_{1}\|<\|\bm{p}-\bm{p}_{2}\|\mbox{のとき}) \\
+\bm{p}_{2} & (\|\bm{p}-\bm{p}_{1}\|\geq\|\bm{p}-\bm{p}_{2}\|\mbox{のとき})
+\end{cases}$
+
+\noindent{\tt zEdge2D/3DDistFromPoint}
+{\bf ある点$\bm{p}$と$\mathrm{E}$との距離$l(\bm{p};\mathrm{E})$}
+
+$l(\bm{p};\mathrm{E})=\|\bm{p}-\bm{p}_{\mathrm{C}}(\bm{p};\mathrm{E})\|$
+
+
+
+\section{平面}
+
+平面$P$は3次元空間のみに定義される構造で，その平面が通るある一点の位置ベクトル$\bm{p}_{0}$と単位法線ベクトル$\bm{n}$で表します（$P\{\bm{p}_{0},\bm{\nu}\}$）．
+次のメソッドが用意されています．
+
+\noindent{\tt zPlane3DDistFromPoint}
+{\bf ある点$\bm{p}$と$\mathrm{P}$との符号付き距離$d(\bm{p};\mathrm{P})$}
+
+$d(\bm{p};\mathrm{P})=(\bm{p}-\bm{p}_{0})^{\mathrm{T}}\bm{n}$
+
+\noindent{\tt zPlane3DPointIsOn}
+{\bf ある点$\bm{p}$が$\mathrm{P}$上に載っているか否か（マージン$d_{\mathrm{m}}$）}
+
+$\left|d(\bm{p};\mathrm{P})\right|<d_{\mathrm{m}}$
+
+\noindent{\tt zPlane3DProjPoint}
+{\bf ある点$\bm{p}$の$\mathrm{P}$への射影$\bm{p}_{\mathrm{P}}(\bm{p};\mathrm{P})$}
+
+$\bm{p}_{\mathrm{P}}(\bm{p};\mathrm{P})=\bm{p}-d(\bm{p};\mathrm{P})\bm{n}$
+
+
+
+\section{三角形}
+
+三角形$T$は，その3頂点の位置ベクトル$\bm{p}_{1}$，$\bm{p}_{2}$，$\bm{p}_{3}$で表します（$T\{\bm{p}_{1},\bm{p}_{2},\bm{p}_{3}\}$）．
+次のメソッドが用意されています．
+
+\noindent{\tt zTri3DArea}
+{\bf $\mathrm{T}$の面積$s(\mathrm{T})$}
+
+$s(\mathrm{T})=\left\|(\bm{p}_{2}-\bm{p}_{1})\times(\bm{p}_{3}-\bm{p}_{1})\right\|$
+
+\noindent{\tt zTri3DNorm}
+{\bf $\mathrm{T}$の単位法線ベクトル$\bm{n}(\mathrm{T})$}（3Dのみ）
+
+$\bm{n}(\mathrm{T})=\frac{(\bm{p}_{2}-\bm{p}_{1})\times(\bm{p}_{3}-\bm{p}_{1})}{s(\mathrm{T})}$
+
+\noindent{\tt zTri3DBarycenter}
+{\bf $\mathrm{T}$の重心$\bm{p}_{\mathrm{GC}}(\mathrm{T})$}
+
+$\bm{p}_{\mathrm{GC}}(\mathrm{T})=\frac{\displaystyle \bm{p}_{1}+\bm{p}_{2}+\bm{p}_{3}}{3}$
+
+\noindent{\tt zTri3DCircumcenter}
+{\bf $\mathrm{T}$の外心$\bm{p}_{\mathrm{CC}}(\mathrm{T})$}
+
+$\bm{p}_{\mathrm{GC}}(\mathrm{T})=\frac{\displaystyle s_{1}\bm{p}_{1}+s_{2}\bm{p}_{2}+s_{3}\bm{p}_{3}}{s_{1}+s_{2}+s_{3}}$
+
+ただし，
+\begin{align*}
+s_{1}&=r_{1}(r_{2}+r_{3}-r_{1})
+\\
+s_{2}&=r_{2}(r_{3}+r_{1}-r_{2})
+\\
+s_{3}&=r_{3}(r_{1}+r_{2}-r_{3})
+\\
+r_{1}&=\|\bm{p}_{3}-\bm{p}_{2}\|^{2}
+\\
+r_{2}&=\|\bm{p}_{1}-\bm{p}_{3}\|^{2}
+\\
+r_{3}&=\|\bm{p}_{2}-\bm{p}_{1}\|^{2}
+\end{align*}
+
+\noindent{\tt zTri3DIncenter}
+{\bf $\mathrm{T}$の内心$\bm{p}_{\mathrm{IC}}(\mathrm{T})$}
+
+$\bm{p}_{\mathrm{IC}}(\mathrm{T})=\frac{\displaystyle w_{1}\bm{p}_{1}+w_{2}\bm{p}_{2}+w_{3}\bm{p}_{3}}{w_{1}+w_{2}+w_{3}}$
+
+ただし，
+\begin{align*}
+w_{1}&=\|\bm{p}_{2}-\bm{p}_{3}\|
+\\
+w_{2}&=\|\bm{p}_{3}-\bm{p}_{1}\|
+\\
+w_{3}&=\|\bm{p}_{1}-\bm{p}_{2}\|
+\end{align*}
+
+\noindent{\tt zTri3DOrthocenter}
+{\bf $\mathrm{T}$の垂心$\bm{p}_{\mathrm{OC}}(\mathrm{T})$}
+
+$\bm{p}_{\mathrm{OC}}(\mathrm{T})=\bm{p}_{\mathrm{CC}}(\mathrm{T}^{\prime})$
+
+ただし，
+\begin{align*}
+\mathrm{T}^{\prime}&=\mathrm{T}^{\prime}\{\bm{p}_{1}^{\prime},\bm{p}_{2}^{\prime},\bm{p}_{3}^{\prime}\}
+\\
+\bm{p}_{1}^{\prime}&=\bm{p}_{2}+\bm{p}_{3}-\bm{p}_{1}
+\\
+\bm{p}_{2}^{\prime}&=\bm{p}_{3}+\bm{p}_{1}-\bm{p}_{2}
+\\
+\bm{p}_{3}^{\prime}&=\bm{p}_{1}+\bm{p}_{2}-\bm{p}_{3}
+\end{align*}
+
+\noindent{\tt zTri2D/3DContigVert}
+{\bf ある点$\bm{p}$に近い頂点$\bm{p}_{\mathrm{CV}}(\bm{p};\mathrm{T})$}
+
+$\bm{p}_{\mathrm{CV}}(\bm{p};\mathrm{T}\{\bm{p}_{1},\bm{p}_{2},\bm{p}_{3}\})=\mathop{\mathrm{arg~min}}_{\bm{p}_{i}}\left\{\|\bm{p}-\bm{p}_{i}\|\,|\,i=1,2,3 \right\}$
+
+\noindent{\tt zTri3DToPlane}
+{\bf $\mathrm{T}$の同一平面$\mathrm{P}\left\{\mathrm{T}\right\}$}（3Dのみ）
+
+$\mathrm{P}\left\{\mathrm{T}\right\}=\mathrm{P}\{\bm{p}_{1},\bm{n}(\mathrm{T})\}$
+
+\noindent{\tt zTri3DDistFromPointToPlane}
+{\bf ある点$\bm{p}$と$\mathrm{T}$の同一平面との符号付き距離$d_{\mathrm{S}}(\bm{p};\mathrm{T})$}
+
+$d_{\mathrm{S}}(\bm{p};\mathrm{T})=d(\bm{p};\mathrm{P}\{\mathrm{T}\})$
+
+\noindent{\tt zTri3DPointIsOnPlane}
+{\bf ある点$\bm{p}$が$\mathrm{T}$の同一平面上に載っているか否か（マージン$d_{\mathrm{m}}$）}
+
+$|d_{\mathrm{S}}(\bm{p};\mathrm{T})|<d_{\mathrm{m}}$
+
+\noindent{\tt zTri3DProjPoint}
+{\bf ある点$\bm{p}$の$\mathrm{T}$の同一平面への射影$\bm{p}_{\mathrm{P}}(\bm{p};\mathrm{T})$}
+
+$\bm{p}_{\mathrm{P}}(\bm{p};\mathrm{T})=\bm{p}_{\mathrm{P}}(\bm{p};\mathrm{P}\{\mathrm{T}\})$
+
+\noindent{\tt zTri3DPointIsInside}
+{\bf ある点$\bm{p}$の$\mathrm{T}$の同一平面への射影が$\mathrm{T}$の内部にあるか否か（マージン$d_{\mathrm{m}}$）}
+
+$(\bm{p}-\bm{p}_{1})^{\top}\bm{g}_{1}<d_{\mathrm{m}}\wedge
+(\bm{p}-\bm{p}_{2})^{\top}\bm{g}_{2}<d_{\mathrm{m}}\wedge
+(\bm{p}-\bm{p}_{3})^{\top}\bm{g}_{3}<d_{\mathrm{m}}$
+
+ただし，
+\begin{align*}
+\bm{g}_{1}&=\frac{(\bm{p}_{2}-\bm{p}_{1})\times\bm{n}(\mathrm{T})}{\|(\bm{p}_{2}-\bm{p}_{1})\times\bm{n}(\mathrm{T})\|}
+\\
+\bm{g}_{2}&=\frac{(\bm{p}_{3}-\bm{p}_{2})\times\bm{n}(\mathrm{T})}{\|(\bm{p}_{3}-\bm{p}_{2})\times\bm{n}(\mathrm{T})\|}
+\\
+\bm{g}_{3}&=\frac{(\bm{p}_{1}-\bm{p}_{3})\times\bm{n}(\mathrm{T})}{\|(\bm{p}_{1}-\bm{p}_{3})\times\bm{n}(\mathrm{T})\|}
+\end{align*}
+
+\noindent{\tt zTri3DClosest}
+{\bf ある点$\bm{p}$の$\mathrm{T}$上の近接点$\bm{p}_{\mathrm{C}}(\bm{p};\mathrm{T})$}
+
+$\bm{p}_{\mathrm{C}}(\bm{p};\mathrm{T})=\begin{cases}
+\bm{p}_{\mathrm{P}}(\bm{p};\mathrm{T}) & (\bm{p}_{\mathrm{P}}(\bm{p};\mathrm{T})\in\mathrm{T}) \\
+\bm{p}_{\mathrm{C}}(\bm{p};\mathrm{E}_{i^{*}}) & (\mbox{otherwise})
+\end{cases}$
+
+ただし，
+\begin{align*}
+i^{*}&=\mathop{\mathrm{arg~min}}_{i}\left\{l(\bm{p};\mathrm{E}_{i})\,|\,i=1,2,3\right\}
+\\
+\mathrm{E}_{1}&=\mathrm{E}_{1}\{\bm{p}_{1},\bm{p}_{2}\}
+\\
+\mathrm{E}_{2}&=\mathrm{E}_{2}\{\bm{p}_{2},\bm{p}_{3}\}
+\\
+\mathrm{E}_{3}&=\mathrm{E}_{3}\{\bm{p}_{3},\bm{p}_{1}\}
+\end{align*}
+
+\noindent{\tt zTri3DClosest}
+{\bf ある点$\bm{p}$と$\mathrm{T}$の距離$d(\bm{p};\mathrm{T})$}
+
+$d(\bm{p};\mathrm{T})=\|\bm{p}-\bm{p}_{\mathrm{C}}(\bm{p};\mathrm{T})\|$
+
+
+\end{document}

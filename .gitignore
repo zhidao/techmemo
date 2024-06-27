@@ -1,2 +1,4 @@
 sandbox
 *.pdf
+*/*.pdf
+*/svg-inkscape
