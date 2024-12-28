@@ -1,0 +1,152 @@
+﻿\documentclass[a4paper]{jsarticle}
+\usepackage[dvips]{graphicx}
+\usepackage{svg}
+\usepackage{amsmath,amssymb,bm}
+
+\everymath{\displaystyle}
+
+\flushbottom
+\sloppy
+
+\setlength{\paperwidth}{210mm}
+\setlength{\paperheight}{297mm}
+\setlength{\voffset}{0mm}
+\setlength{\hoffset}{0mm}
+\setlength{\textwidth}{\paperwidth}
+\addtolength{\textwidth}{-30mm}
+\setlength{\textheight}{\paperheight}
+\addtolength{\textheight}{-60mm}
+\setlength{\topmargin}{-1in}
+\addtolength{\topmargin}{20mm}
+\setlength{\headheight}{0mm}
+\setlength{\headsep}{0mm}
+\setlength{\footskip}{10mm}
+\setlength{\oddsidemargin}{-1in}
+\addtolength{\oddsidemargin}{15mm}
+\setlength{\columnsep}{7mm}
+
+\title{\bf 台形型速度カーブを用いた移動}
+\author{\Large{\bf 杉原 知道}}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-\baselineskip}
+
+\begin{figure}[th]
+\begin{center}
+\includesvg[width=.5\textwidth]{velocity_profile_trapezoidal.svg}
+\end{center}
+\end{figure}
+
+初期速度$v_{1}$から時刻$T_{1}$まで加速度$a$（$>0$）で加速して$v_{\mathrm{M}}$に至り，
+その後の時刻$T_{2}$に加速度$-a$で減速を開始して時刻$T$に終端速度$v_{2}$に至る，
+かつその間の移動距離が$D$となるよう速度変化させることにする．
+このときの時刻$T_{1}$，$T_{2}$および$T$を求めたい．
+ただし，他の変数は全て与えられるものとする．
+
+まず，速度の条件
+\begin{align}
+v_{1}+aT_{1}&=v_{\mathrm{M}} \\
+v_{\mathrm{M}}-a(T-T_{2})&=v_{2}
+\end{align}
+が成り立つので，
+\begin{align}
+T_{1}&=\frac{v_{\mathrm{M}}-v_{1}}{a} \\
+T-T_{2}&=\frac{v_{\mathrm{M}}-v_{2}}{a}
+\end{align}
+を得る．
+時刻$t=0\sim T_{1}$での移動距離$d_{1}$は
+\begin{align}
+d_{1}=v_{1}T_{1}+\frac{1}{2}aT_{1}^{2}
+\end{align}
+であり，時刻$t=T_{2}\sim T$での移動距離$d_{3}$は
+\begin{align}
+d_{3}=v_{2}(T-T_{2})+\frac{1}{2}a(T-T_{2})^{2}
+\end{align}
+である．
+速度が一定値$v_{\mathrm{M}}$である時刻$t=T_{1}\sim T_{2}$での移動距離を考えると
+\begin{align}
+D-d_{1}-d_{3}=v_{\mathrm{M}}(T_{2}-T_{1})
+\end{align}
+が成り立つ，すなわち
+\begin{align}
+T_{2}-T_{1}=\frac{D-d_{1}-d_{3}}{v_{\mathrm{M}}}
+\end{align}
+である．
+よって，
+\begin{align}
+T_{2}&=T_{1}+\frac{D-d_{1}-d_{3}}{v_{\mathrm{M}}}
+\\
+T&=T_{2}+\frac{v_{\mathrm{M}}-v_{2}}{a}
+\end{align}
+となる．
+時刻に対する移動距離$d(t)$は
+\begin{align}
+d(t)=\begin{cases}
+v_{1}t+\frac{1}{2}at^{2} & (0\leq t<T_{1})
+\\
+v_{1}T_{1}+\frac{1}{2}aT_{1}^{2}+v_{\mathrm{M}}(t-T_{1}) & (T_{1}\leq t<T_{2})
+\\
+D-\frac{1}{2}a(T-t)^{2} & (T_{2}\leq t\leq T)
+\end{cases}
+\end{align}
+となる．
+
+
+
+
+\begin{figure}[h]
+\begin{center}
+\includesvg[width=.3\textwidth]{velocity_profile_nonflat.svg}
+\end{center}
+\end{figure}
+
+上記において，$T_{1}$，$T_{2}$は$T_{1}\leq T_{2}$を満たしていなければならない．
+もし$T_{2}<T_{1}$となっているならば，速度が$v_{\mathrm{M}}$に達することなく距離$D$移動できるということを意味する．
+この場合，
+初期速度$v_{1}$から時刻$T^{\prime}$まで加速度$a$（$>0$）で加速し，
+その直後に加速度$-a$に転じて時刻$T$まで減速して終端速度$v_{2}$に至る，
+かつその間の移動距離が$D$となるように速度変化させることを考える．
+このときの$T^{\prime}$および$T$を求めよう．
+
+時刻$T^{\prime}$における速度を$v_{\mathrm{M}}^{\prime}$とおくと，速度の条件
+\begin{align}
+v_{1}+aT^{\prime}&=v_{\mathrm{M}}^{\prime} \\
+v_{\mathrm{M}}^{\prime}-a(T-T^{\prime})&=v_{2}
+\end{align}
+が成り立つので，
+\begin{align}
+T^{\prime}&=\frac{v_{\mathrm{M}}^{\prime}-v_{1}}{a} \\
+T-T^{\prime}&=\frac{v_{\mathrm{M}}^{\prime}-v_{2}}{a}
+\end{align}
+を得る．
+時刻$t=0\sim T^{\prime}$での移動距離$d_{1}^{\prime}$は
+\begin{align}
+d_{1}^{\prime}=v_{1}T^{\prime}+\frac{1}{2}aT^{\prime 2}
+\end{align}
+であり，時刻$t=T^{\prime}\sim T$での移動距離$d_{2}^{\prime}$は
+\begin{align}
+d_{2}^{\prime}=v_{2}(T-T^{\prime})+\frac{1}{2}a(T-T^{\prime})^{2}
+\end{align}
+である．
+移動距離について
+\begin{align}
+D=d_{1}^{\prime}+d_{2}^{\prime}
+\end{align}
+が成り立つ，すなわち
+\begin{align}
+&v_{1}T^{\prime}+\frac{1}{2}aT^{\prime 2}
++v_{2}(T-T^{\prime})+\frac{1}{2}a(T-T^{\prime})^{2}
+=D
+\nonumber \\
+\Leftrightarrow\qquad&
+v_{\mathrm{M}}^{\prime}=\sqrt{\frac{v_{1}^{2}+v_{2}^{2}+2aD}{2}}
+\end{align}
+である．
+これを上式に代入すれば，$T^{\prime}$および$T$が順次得られる．
+$T_{1}=T_{2}=T^{\prime}$とすれば，
+時刻に対する移動距離$d(t)$は先のものと同一になる．
+
+
+\end{document}

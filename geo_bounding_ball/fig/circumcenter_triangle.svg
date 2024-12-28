@@ -26,8 +26,8 @@
      showgrid="true"
      inkscape:snap-object-midpoints="true"
      inkscape:zoom="0.72892156"
-     inkscape:cx="452.03766"
-     inkscape:cy="677.71352"
+     inkscape:cx="452.03767"
+     inkscape:cy="677.71353"
      inkscape:window-width="1920"
      inkscape:window-height="1103"
      inkscape:window-x="0"
@@ -751,7 +751,7 @@
      id="layer1">
     <g
        inkscape:label=""
-       transform="translate(87.96875,144.5988)"
+       transform="translate(82.171875,165.79688)"
        id="g8057">
       <g
          id="g4073">
@@ -825,16 +825,19 @@
     </g>
     <path
        style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="M 25,225 H 175 L 125,75 Z"
-       id="path859" />
+       d="M 20,235 H 180 L 130,80 Z"
+       id="path859"
+       sodipodi:nodetypes="cccc" />
     <path
        style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="m 125,75 -25,100 75,50"
-       id="path861" />
+       d="m 130,80 -30,95 80,60"
+       id="path861"
+       sodipodi:nodetypes="ccc" />
     <path
        style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="M 100,175 25,225"
-       id="path863" />
+       d="M 100,175 20,235"
+       id="path863"
+       sodipodi:nodetypes="cc" />
     <path
        style="fill:#000000;fill-opacity:1;fill-rule:evenodd;stroke-width:5.00785;stroke-linecap:square;stroke-linejoin:round"
        id="path887"
@@ -869,7 +872,7 @@
     </g>
     <g
        inkscape:label=""
-       transform="translate(23.546875,55.171875)"
+       transform="translate(26.0625,54.0625)"
        id="g1898-3">
       <g
          id="g9593-6">
@@ -907,7 +910,7 @@
     </g>
     <g
        inkscape:label=""
-       transform="translate(39.112438,-2.5405567)"
+       transform="translate(40.927334,-4.7184316)"
        id="g3330">
       <g
          id="g3382">
@@ -981,7 +984,7 @@
     </g>
     <g
        inkscape:label=""
-       transform="translate(-98.81954,144.18292)"
+       transform="translate(-92.906103,165.381)"
        id="g3736">
       <g
          id="g2895">
@@ -1217,5 +1220,11 @@
         </g>
       </g>
     </g>
+    <circle
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:0.264999;stroke-linecap:square;stroke-linejoin:round;stroke-dasharray:1.06, 1.06;stroke-opacity:1"
+       id="path1114"
+       cx="100"
+       cy="174.99998"
+       r="100" />
   </g>
 </svg>

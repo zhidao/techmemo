@@ -1,38 +1,32 @@
 ﻿\documentclass[a4paper]{jsarticle}
-\usepackage{graphicx}
+\usepackage[dvips]{graphicx}
 \usepackage{amsmath,amssymb,bm}
+\usepackage{ascmac}
 \usepackage{algorithm,algpseudocode}
+\usepackage{svg}
+\usepackage{url}
 
 \flushbottom
 \sloppy
 
-%%% paper size = A4
 \setlength{\paperwidth}{210mm}
 \setlength{\paperheight}{297mm}
-
-%%% truncate offset
 \setlength{\voffset}{0mm}
 \setlength{\hoffset}{0mm}
-
-%%% text bounding size
 \setlength{\textwidth}{\paperwidth}
 \addtolength{\textwidth}{-30mm}
 \setlength{\textheight}{\paperheight}
 \addtolength{\textheight}{-60mm}
-
-%%% text margin
 \setlength{\topmargin}{-1in}
 \addtolength{\topmargin}{20mm}
 \setlength{\headheight}{0mm}
 \setlength{\headsep}{0mm}
 \setlength{\footskip}{10mm}
-
-%\setlength{\oddsidemargin}{-30pt}
 \setlength{\oddsidemargin}{-1in}
 \addtolength{\oddsidemargin}{15mm}
 \setlength{\columnsep}{7mm}
 
-\title{\bf 最小包含球(Bounding Ball, Smallest Enclosing Ball)を求めるエレガントなアルゴリズム}
+\title{\bf 最小包含球を求めるエレガントなアルゴリズムと実用的実装}
 \author{\Large{\bf 杉原 知道}}
 \date{}
 
@@ -42,59 +36,63 @@
 
 \section{はじめに}
 
-$n$個の点から成る点群$\mathcal{P}=\{\boldsymbol{p}_{i}|i=1\sim N\}$を内部および表面上に全て含む球のうち，
-最小半径のものを{\bf 最小包含球}と呼びます．
+点群$\mathcal{P}=\{\mathrm{P}_{i}|i=1\sim N\}$に含まれる$N$個の点を全て内部および表面上に含む球のうち，
+半径が最小のものを{\bf 最小包含球}(Bounding Ball, Smallest Enclosing Ball)と呼びます．
 最も単純な包含立体の一つであり，
 領域判定や干渉判定などのいろいろな場面で有用なものです．
-これを求めるアルゴリズムは幾つかありますが，
-本記事ではその中でもエレガントな，
-次の論文で提案されているものを解説します．
+
+以下，中心点が$\mathrm{P}_{\mathrm{C}}(\boldsymbol{p}_{\mathrm{C}})$かつ半径が$r$である球を$\mathcal{B}(\boldsymbol{p}_{\mathrm{C}},r)$，点群$\mathcal{P}$の最小包含球を$\mathcal{BB}(\mathcal{P})=\mathcal{B}(\boldsymbol{p}_{\mathrm{BB}},r_{\mathrm{BB}})$と表すことにします．$\boldsymbol{p}_{\mathrm{BB}}$と$r_{\mathrm{BB}}$を求める計算は，次のように最適化問題として表現できます．
+\begin{align*}
+\left\{\boldsymbol{p}_{\mathrm{BB}},r_{\mathrm{BB}}\right\}=\mathop{\mathrm{arg~min}}_{\boldsymbol{p}_{\mathrm{C}},r}\left\{r
+\left|\|\boldsymbol{p}-\boldsymbol{p}_{\mathrm{C}}\|\leq r, \forall\boldsymbol{p}\in\mathcal{P}\right.
+\right\}
+\end{align*}
+これを解く効率の良いアルゴリズムは，幾つか知られています．本記事ではその中でもエレガントな，次の論文で提案されているものを解説します．
 
 Emo Welzl, Smallest enclosing disks (balls and ellipsoids), in New Results and New Trends in Computer Science, Lecture Notes in Computer Science, Springer-Verlag, pp. 359--370, 1991.
 
-以下では，
-点群$\mathcal{P}$に対する最小包含球を$\mathcal{BB}(\mathcal{P})$と表すことにします．
+原著論文は著者自身が公開しているものが読めます．
+\url{https://people.inf.ethz.ch/emo/PublFiles/SmallEnclDisk_LNCS555_91.pdf}
+
+ただし後に書くように，実用上は再帰呼び出しの深さが問題になるので，再帰関数を用いずに実装する方法が必要です．本記事ではこれも示します．
+\footnote{同じ問題意識を持って書かれたこちら(https://note.com/marupeke296/n/nfc914aaf3996)の記事は大変貴重で，参考にさせて頂きました．}
+
 
 
 \section{点の数$N\leq 4$のときの最小包含球}
 
+\subsection{$N\leq 4$ならば最小包含球は直接求まる}
+
 点の数$N=1$のときは，
 $\mathcal{BB}(\mathcal{P})$は$\mathcal{P}$に含まれるただ一つの点を中心とする半径$0$の球となります．
-最小包含球が実用上の意味を持つのは$N\geq 2$の場合で，このとき次の命題$\star$が成り立ちます．
-
-\begin{quote}
-命題$\star$）
-$N\geq 2$のとき，
-$\mathcal{BB}(\mathcal{P})$は次の3つの条件のうちいずれかを必ず満たす．
+すなわち$\boldsymbol{p}_{\mathrm{BB}}=\boldsymbol{p}_{1}$，$r_{\mathrm{BB}}=0$です．
+最小包含球が実用上の意味を持つのは$N\geq 2$の場合で，このとき$\mathcal{BB}(\mathcal{P})$は，次の3つの条件のうちいずれかを必ず満たします．
 \begin{enumerate}
 \item{$\mathcal{P}$に含まれるある2点を直径の両端に持つ．}
 \item{$\mathcal{P}$に含まれるある3点から成る三角形の外接円を最大断面とする．}
 \item{$\mathcal{P}$に含まれるある4点から成る四面体の外接球である．}
 \end{enumerate}
-\end{quote}
 
 1つめの条件を満たす球は${}_{N}C_{2}$個，
 2つめの条件を満たす球は${}_{N}C_{3}$個，
 3つめの条件を満たす球は${}_{N}C_{4}$個あります．
-$N\leq 4$のときは高々${}_{4}C_{2}+{}_{4}C_{3}+{}_{4}C_{4}=10$通りの候補を実際に求め，
+$N\leq 4$のときは可能性が高々${}_{4}C_{2}+{}_{4}C_{3}+{}_{4}C_{4}=10$通りに絞られるので，
 その中から最小半径のものを選べば良いわけです．
 
-具体的にそれぞれの球を求めてみます．
-データ構造としては，球は中心座標$\boldsymbol{p}_{\mathrm{C}}$と半径$r$の組で表されます．
+具体的にそれぞれの球を求めてみましょう．
 
-\subsection{$\boldsymbol{p}_{i}$と$\boldsymbol{p}_{j}$を直径の両端点とする球}
+\subsection{$\mathrm{P}_{i}(\boldsymbol{p}_{i})$と$\mathrm{P}_{j}(\boldsymbol{p}_{j})$を直径の両端点とする球}
 
 これは単純に，中心座標$\boldsymbol{p}_{\mathrm{C}}=\frac{\displaystyle\boldsymbol{p}_{i}+\boldsymbol{p}_{j}}{\displaystyle 2}$，半径$r=\frac{\displaystyle \|\boldsymbol{p}_{i}-\boldsymbol{p}_{j}\|}{\displaystyle 2}$と求まります．
 
-\subsection{$\boldsymbol{p}_{i}$，$\boldsymbol{p}_{j}$，$\boldsymbol{p}_{k}$を頂点とする三角形の外接円を最大断面とする球}
+\subsection{$\mathrm{P}_{i}(\boldsymbol{p}_{i})$，$\mathrm{P}_{i}(\boldsymbol{p}_{j})$，$\mathrm{P}_{i}(\boldsymbol{p}_{k})$を頂点とする三角形の外接円を最大断面とする球}
 
 \begin{figure*}[h]
 \centering
-\includegraphics[width=.6\textwidth]{fig/circumcenter_triangle.eps}
+\includesvg[width=.4\textwidth]{fig/circumcenter_triangle.svg}
 \end{figure*}
 
-上図のように，三角形の頂点を$\mathrm{P}_{i}(\boldsymbol{p}_{i})$，$\mathrm{P}_{j}(\boldsymbol{p}_{j})$，$\mathrm{P}_{k}(\boldsymbol{p}_{k})$，
-中心を$\mathrm{P}_{\mathrm{C}}(\boldsymbol{p}_{\mathrm{C}})$とそれぞれおきます．
+$\mathrm{P}_{\mathrm{C}}$は，この三角形の外心となります．
 $s_{i}=\triangle\mathrm{P}_{\mathrm{C}}\mathrm{P}_{j}\mathrm{P}_{k}$，
 $s_{j}=\triangle\mathrm{P}_{\mathrm{C}}\mathrm{P}_{k}\mathrm{P}_{i}$，
 $s_{k}=\triangle\mathrm{P}_{\mathrm{C}}\mathrm{P}_{i}\mathrm{P}_{j}$とそれぞれおいたとき，
@@ -142,7 +140,7 @@ s_{j}=\frac{1}{2}r^{2}\cdot\frac{l_{j}}{2r}\cdot\frac{l_{k}^{2}+l_{i}^{2}-l_{j}^
 s_{k}=\frac{1}{2}r^{2}\cdot\frac{l_{k}}{2r}\cdot\frac{l_{i}^{2}+l_{j}^{2}-l_{k}^{2}}{2l_{i}l_{j}}
 \end{align*}
 となります．
-中心座標を求める際には，これらの比だけが意味を持つので，
+中心座標を求める際にはこれらの比だけが意味を持つので，
 \begin{align*}
 s_{i}=l_{i}^{2}(l_{j}^{2}+l_{k}^{2}-l_{i}^{2})
 \\
@@ -152,21 +150,32 @@ s_{k}=l_{k}^{2}(l_{i}^{2}+l_{j}^{2}-l_{k}^{2})
 \end{align*}
 としても問題ありません．
 これらを上の式に代入すれば，$\boldsymbol{p}_{\mathrm{C}}$を得ます．
-半径は，$r=\|\boldsymbol{p}_{i}-\boldsymbol{p}_{\mathrm{C}}\|$と求まります．
+半径は，量子化誤差の影響を考えて$r=\sum_{m=i,j,k}\|\boldsymbol{p}_{m}-\boldsymbol{p}_{\mathrm{C}}\|/3$とします．
 
-\subsection{$\boldsymbol{p}_{i}$，$\boldsymbol{p}_{j}$，$\boldsymbol{p}_{k}$，$\boldsymbol{p}_{l}$を頂点とする四面体の外接球}
+\subsection{$\mathrm{P}_{i}(\boldsymbol{p}_{i})$，$\mathrm{P}_{i}(\boldsymbol{p}_{j})$，$\mathrm{P}_{i}(\boldsymbol{p}_{k})$，$\mathrm{P}_{i}(\boldsymbol{p}_{l})$を頂点とする四面体の外接球}
 
-頂点を$\mathrm{P}_{i}(\boldsymbol{p}_{i})$，$\mathrm{P}_{j}(\boldsymbol{p}_{j})$，$\mathrm{P}_{k}(\boldsymbol{p}_{k})$，$\mathrm{P}_{l}(\boldsymbol{p}_{l})$，
-中心を$\mathrm{P}_{\mathrm{C}}(\boldsymbol{p}_{\mathrm{C}})$とそれぞれおきます．
-外接球の中心は，
-辺$\overline{\mathrm{P}_{i}\mathrm{P}_{l}}$の二等分面，
-辺$\overline{\mathrm{P}_{j}\mathrm{P}_{l}}$の二等分面，
-辺$\overline{\mathrm{P}_{k}\mathrm{P}_{l}}$の二等分面の交点として求まります．
-このことから，
+\begin{figure*}[h]
+\centering
+\includesvg[width=.4\textwidth]{fig/circumcenter_tetrahedron.svg}
+\end{figure*}
+
+$\mathrm{P}_{\mathrm{C}}$は四面体の外心となります．
+これは，四面体の全ての辺の垂直二等分面の交点です．
+四面体の辺は6本ありますが，実際は全ての辺について考える必要は無く，
+ある一点を共有する3辺のみ考えれば十分です（四面体の外心の性質より，残り3辺の垂直二等分面も同一点で交わるため）．
+ここでは点$\mathrm{P}_{l}$を共有する3辺
+$\mathrm{P}_{i}\mathrm{P}_{l}$，
+$\mathrm{P}_{j}\mathrm{P}_{l}$，
+$\mathrm{P}_{k}\mathrm{P}_{l}$を考えましょう．
+上図はちょっと分かりづらいですが，
+3つの垂直二等分面による四面体の断面（三角形）の交点が，求めたい$\mathrm{P}_{\mathrm{C}}$であることを表しています．
+
+$\mathrm{P}_{\mathrm{C}}$が辺$\mathrm{P}_{i}\mathrm{P}_{l}$の垂直二等分面上の点であるということは，
+$\mathrm{P}_{\mathrm{C}}$を辺$\mathrm{P}_{i}\mathrm{P}_{l}$上に射影したときに辺$\mathrm{P}_{i}\mathrm{P}_{l}$の中点となるということなので，
 $\boldsymbol{e}_{i}=\boldsymbol{p}_{i}-\boldsymbol{p}_{l}$，
 $\boldsymbol{e}_{j}=\boldsymbol{p}_{j}-\boldsymbol{p}_{l}$，
 $\boldsymbol{e}_{k}=\boldsymbol{p}_{k}-\boldsymbol{p}_{l}$，
-$\boldsymbol{e}_{\mathrm{C}}=\boldsymbol{p}_{\mathrm{C}}-\boldsymbol{p}_{l}$とそれぞれおくと，次が成り立ちます．
+$\boldsymbol{e}_{\mathrm{C}}=\boldsymbol{p}_{\mathrm{C}}-\boldsymbol{p}_{l}$とそれぞれおくと次が成り立つはずです．
 \begin{align*}
 \boldsymbol{e}_{i}^{\mathrm{T}}\boldsymbol{e}_{\mathrm{C}}=\frac{1}{2}\|\boldsymbol{e}_{i}\|^{2}
 \\
@@ -181,7 +190,8 @@ $\boldsymbol{e}_{\mathrm{C}}=\boldsymbol{p}_{\mathrm{C}}-\boldsymbol{p}_{l}$と�
 \frac{1}{2}
 \begin{bmatrix} \|\boldsymbol{e}_{i}\|^{2} \\ \|\boldsymbol{e}_{j}\|^{2} \\ \|\boldsymbol{e}_{k}\|^{2} \end{bmatrix}
 \end{align*}
-これは$\boldsymbol{e}_{\mathrm{C}}$について次のように直接的に解けます．
+$\boldsymbol{e}_{i}$，$\boldsymbol{e}_{j}$，$\boldsymbol{e}_{k}$が互いに独立ならば，
+上式は$\boldsymbol{e}_{\mathrm{C}}$について次のように直接的に解けます．
 \begin{align*}
 \boldsymbol{e}_{\mathrm{C}}=
 \frac{1}{2}
@@ -207,126 +217,295 @@ $\left[\boldsymbol{e}_{i}~\boldsymbol{e}_{j}~\boldsymbol{e}_{k}\right]
 =\boldsymbol{e}_{i}^{\mathrm{T}}(\boldsymbol{e}_{j}\times\boldsymbol{e}_{k})
 =\boldsymbol{e}_{j}^{\mathrm{T}}(\boldsymbol{e}_{k}\times\boldsymbol{e}_{i})
 =\boldsymbol{e}_{k}^{\mathrm{T}}(\boldsymbol{e}_{i}\times\boldsymbol{e}_{j})$
-はスカラー三重積と呼ばれます．
+はスカラー三重積またはGrassmann積と呼ばれます．
 中心座標は$\boldsymbol{p}_{\mathrm{C}}=\boldsymbol{p}_{l}+\boldsymbol{e}_{\mathrm{C}}$となります．
-半径は，前のケースと同様に
+半径は，
 \begin{align*}
-r=\|\boldsymbol{p}_{i}-\boldsymbol{p}_{\mathrm{C}}\|
+r=\|\boldsymbol{e}_{\mathrm{C}}\|
 \end{align*}
-と求まります．
+と求まりますが，前のケースと同様に
+\begin{align*}
+r=\sum_{m=i,j,k,l}\|\boldsymbol{p}_{m}-\boldsymbol{p}_{\mathrm{C}}\|/4
+\end{align*}
+としても良いでしょう．
 
-\section{$N\geq 5$のときの最小包含球}
+\subsection{10通りの可能性を総当りで調べる必要は無い}
 
-$N\geq 5$のときは，
-次のような再帰的手続きを定義します．
-ただし，$\mathcal{P}_{n}=\{\boldsymbol{p}_{i}|i=1\sim n\}$とおいています（$\mathcal{P}_{n}=\mathcal{P}_{n-1}\cup\left\{\boldsymbol{p}_{n}\right\}$，$\mathcal{P}=\mathcal{P}_{N}$です）．
+前述の通り，$N=4$ならば最小包含球は高々${}_{4}C_{2}+{}_{4}C_{3}+{}_{4}C_{4}=10$個の可能性のうちの一つとなるわけですが，最初から10通りの計算をして総当りで比較する必要はありません．
+
+1つ目の可能性，「$\mathcal{P}$に含まれるある2点（$\mathrm{P}_{i}$，$\mathrm{P}_{j}$とします）を直径の両端に持つ」球が他の2点（$\mathrm{P}_{k}$，$\mathrm{P}_{l}$とします）を内部に含むとき，「$\mathrm{P}_{i}$，$\mathrm{P}_{k}$を直径の両端に持つ球」「$\mathrm{P}_{i}$，$\mathrm{P}_{l}$を直径の両端に持つ球」「$\mathrm{P}_{k}$，$\mathrm{P}_{l}$を直径の両端に持つ球」はいずれも$\mathrm{P}_{j}$を包含しません．
+また，この球の半径は，「$\mathrm{P}_{i}$，$\mathrm{P}_{j}$，$\mathrm{P}_{k}$を通る円を最大断面とする球」「$\mathrm{P}_{i}$，$\mathrm{P}_{j}$，$\mathrm{P}_{l}$を通る円を最大断面とする球」「$\mathrm{P}_{j}$，$\mathrm{P}_{k}$，$\mathrm{P}_{l}$を通る円を最大断面とする球」のいずれの半径よりも小さいことが保証されます（証明は省略します）．
+
+同様のことが2つ目の可能性についても言えます．すなわち，「$\mathcal{P}$に含まれるある3点（$\mathrm{P}_{i}$，$\mathrm{P}_{j}$，$\mathrm{P}_{k}$とします）を通る円を最大断面とする」球が残りの1点（$\mathrm{P}_{l}$とします）を内部に含むとき，「$\mathrm{P}_{i}$，$\mathrm{P}_{j}$，$\mathrm{P}_{l}$を通る円を最大断面とする球」は$\mathrm{P}_{k}$を包含しません．
+また，この球の半径は，「$\mathrm{P}_{i}$，$\mathrm{P}_{j}$，$\mathrm{P}_{k}$，$\mathrm{P}_{l}$を通る球」の半径よりも小さいことが保証されます（こちらも証明は省略します）．
+
+以上より，
+\begin{enumerate}
+\item{まず4点から2点を順番に選んでいき，それを直径の両端とする球が残り2点を包含するものが見つかったら，その時点でそれが最小包含球と分かる}
+\item{上記のような球が存在しない場合，4点から3点を順番に選んでいき，それらを通る円を最大断面とする球が残り1点を包含するものが見つかったら，その時点でそれが最小包含球と分かる}
+\item{上記のような球が存在しない場合，4点を通る球が最小包含球と分かる}
+\end{enumerate}
+ということが言えます．
+
+この部分のアルゴリズムは，下記のAlgorithm 1のようになります．
+
+
+
+
+ただし，$|\mathcal{P}|$は$\mathcal{P}$の要素数を意味します．また，\textsc{BoundingBall2}$(\boldsymbol{p}_{i},\boldsymbol{p}_{j})$，\textsc{BoundingBall3}$(\boldsymbol{p}_{i},\boldsymbol{p}_{j},\boldsymbol{p}_{k})$，\textsc{BoundingBall4}$(\boldsymbol{p}_{i},\boldsymbol{p}_{j},\boldsymbol{p}_{k},\boldsymbol{p}_{l})$はそれぞれ，上で説明した「$\boldsymbol{p}_{i}$，$\boldsymbol{p}_{j}$を直径の両端とする球」「$\boldsymbol{p}_{i}$，$\boldsymbol{p}_{j}$，$\boldsymbol{p}_{k}$を通る円を最大断面とする球」「$\boldsymbol{p}_{i}$，$\boldsymbol{p}_{j}$，$\boldsymbol{p}_{k}$，$\boldsymbol{p}_{l}$を通る球」を求める計算に対応します．
+
+\begin{algorithm}[h]
+\caption{\textsc{BoundingBallDirect}$(\mathcal{P})\rightarrow\mathcal{BB}(\mathcal{P})$ ($1\leq|\mathcal{P}|\leq 4$ required)}
+\begin{algorithmic}[1]
+\If{$\left|\mathcal{P}\right|=1$}
+  \State {\bf return} $\mathcal{B}(\boldsymbol{p}_{1},0)$
+\EndIf
+\If{$\left|\mathcal{P}\right|\geq 2$}
+  \For{$\forall\mathrm{P}_{i}(\boldsymbol{p}_{i})\in\mathcal{P}, \forall\mathrm{P}_{j}(\boldsymbol{p}_{j})\in\mathcal{P}, i\neq j$}
+    \State $\mathcal{B}\leftarrow$\textsc{BoundingBall2}$(\boldsymbol{p}_{i},\boldsymbol{p}_{j})$
+    \If{$\boldsymbol{p}_{k}\in\mathcal{B}~~(k\neq i, k\neq j)$ and $\boldsymbol{p}_{l}\in\mathcal{B}~~(l\neq i, l\neq j, l\neq k)$}
+      \State {\bf return} $\mathcal{B}$
+    \EndIf
+  \EndFor
+\EndIf
+\If{$\left|\mathcal{P}\right|\geq 3$}
+  \For{$\forall\mathrm{P}_{i}(\boldsymbol{p}_{i})\in\mathcal{P},\forall\mathrm{P}_{j}(\boldsymbol{p}_{j})\in\mathcal{P},\forall\mathrm{P}_{k}(\boldsymbol{p}_{k})\in\mathcal{P}, i\neq j, j\neq k, i\neq k$}
+    \State $\mathcal{B}\leftarrow$\textsc{BoundingBall3}$(\boldsymbol{p}_{i},\boldsymbol{p}_{j},\boldsymbol{p}_{k})$
+    \If{$\boldsymbol{p}_{l}\in\mathcal{B}~~(l\neq i, l\neq j, l\neq k)$}
+      \State {\bf return} $\mathcal{B}$
+    \EndIf
+  \EndFor
+\EndIf
+\State {\bf return} \textsc{BoundingBall4}$(\boldsymbol{p}_{1},\boldsymbol{p}_{2},\boldsymbol{p}_{3},\boldsymbol{p}_{4})$
+\Comment $\left|\mathcal{P}\right|=4$
+\end{algorithmic}
+\end{algorithm}
+
+
+
+
+
+\section{点の数$N\geq 5$のときの最小包含球}
+
+\subsection{$N\geq 5$ならば最小包含球は再帰的に求まる}
+
+$N\geq 5$のときは，次のように考えます．
+
+まず，$N$個のうち$1\sim n$番目（$n\leq N$）の点のみを集めた部分点群を$\mathcal{P}_{n}=\{\mathrm{P}_{i}|i=1\sim n\}$と表すことにします．今，$\mathcal{P}_{n-1}$の最小包含球$\mathcal{BB}(\mathcal{P}_{n-1})$が求まっているとして，
+\begin{itemize}
+\item $\mathrm{P}_{n}$が$\mathcal{BB}(\mathcal{P}_{n-1})$内部（境界含む）の点ならば，
+明らかに$\mathcal{BB}(\mathcal{P}_{n})=\mathcal{BB}(\mathcal{P}_{n-1})$
+\item $\mathrm{P}_{n}$が$\mathcal{BB}(\mathcal{P}_{n-1})$外部の点ならば，
+$\mathrm{P}_{n}$は明らかに$\mathcal{BB}(\mathcal{P}_{n})$の境界上の点
+\end{itemize}
+が言えます．
+
+ここで，境界上の点の候補のみを選り分けた点群$\mathcal{R}$を作り，$\mathcal{P}_{n}$と$\mathcal{R}$を併せた点群の最小包含球$\mathcal{BB}(\mathcal{P}_{n}\cup\mathcal{R})$を求めることを考えましょう．前節で説明したことより，$\left|\mathcal{R}\right|$は高々4ですので，もし，$\left|\mathcal{R}\right|=4$である，あるいは$\mathcal{P}_{n}=\emptyset$であるならば，$\mathcal{BB}(\mathcal{P}_{n}\cup\mathcal{R})=\mathcal{BB}(\mathcal{R})$のはずです．$\mathcal{BB}(\mathcal{R})$は前節で示した関数\textsc{BoundingBallDirect}で求めることが出来ます．
+
+今，$\mathcal{P}_{n-1}\cup\mathcal{R}$の最小包含球$\mathcal{BB}(\mathcal{P}_{n-1}\cup\mathcal{R})$が求まっているとして，
+\begin{itemize}
+\item $\mathrm{P}_{n}$が$\mathcal{BB}(\mathcal{P}_{n-1}\cup\mathcal{R})$内部（境界含む）の点ならば，
+明らかに$\mathcal{BB}(\mathcal{P}_{n}\cup\mathcal{R})=\mathcal{BB}(\mathcal{P}_{n-1}\cup\mathcal{R})$
+\item $\mathrm{P}_{n}$が$\mathcal{BB}(\mathcal{P}_{n-1}\cup\mathcal{R})$外部の点ならば，
+$\mathrm{P}_{n}$は明らかに$\mathcal{BB}(\mathcal{P}_{n}\cup\mathcal{R})$境界上の点，すなわち
+$\mathcal{BB}(\mathcal{P}_{n}\cup\mathcal{R})=\mathcal{BB}(\mathcal{P}_{n-1}\cup(\mathcal{R}\cup\left\{\mathrm{P}_{n}\right\}))$
+\end{itemize}
+が言えます．以上のことから，次のAlgorithm 2，Algorithm 3が導けます．
+
 \begin{algorithm}[h]
 \caption{\textsc{BoundingBall}$(\mathcal{P}_{n})\rightarrow\mathcal{BB}(\mathcal{P}_{n})$}
 \begin{algorithmic}[1]
 \If{$n\leq 4$}
-  \State {\bf Return} \textsc{BoundingBallDirect}$(\mathcal{P}_{n})$
+  \State {\bf return} \textsc{BoundingBallDirect}$(\mathcal{P}_{n})$
 \EndIf
 \State $\mathcal{BB}(\mathcal{P}_{n-1})\leftarrow$\textsc{BoundingBall}$(\mathcal{P}_{n-1})$
 \If{$\boldsymbol{p}_{n}\in\mathcal{BB}(\mathcal{P}_{n-1})$}
-  \State {\bf Return} $\mathcal{BB}(\mathcal{P}_{n-1})$
+  \State {\bf return} $\mathcal{BB}(\mathcal{P}_{n-1})$
+\Else
+  \State {\bf return} \textsc{BoundingBallInternal}$(\mathcal{P}_{n-1},\left\{\boldsymbol{p}_{n}\right\})$
 \EndIf
-\State {\bf Return} \textsc{BoundingBallSub}$(\mathcal{P}_{n-1},\left\{\boldsymbol{p}_{n}\right\})$
 \end{algorithmic}
 \end{algorithm}
 
 \begin{algorithm}[h]
-\caption{\textsc{BoundingBallSub}$(\mathcal{P}_{n},\mathcal{R})\rightarrow\mathcal{BB}(\mathcal{P}_{n}\cup\mathcal{R})$}
+\caption{\textsc{BoundingBallInternal}$(\mathcal{P}_{n},\mathcal{R})\rightarrow\mathcal{BB}(\mathcal{P}_{n}\cup\mathcal{R})$}
 \begin{algorithmic}[1]
-\If{$\left|\mathcal{R}\right|=4$ or $\mathcal{P}_{n}=\emptyset$}
-  \State {\bf Return} \textsc{BoundingBallDirect}$(\mathcal{R})$
+\If{$\mathcal{P}_{n}=\emptyset$ or $\left|\mathcal{R}\right|=4$}
+  \State {\bf return} \textsc{BoundingBallDirect}$(\mathcal{R})$
 \EndIf
-\State $\mathcal{BB}(\mathcal{P}_{n-1}\cup\mathcal{R})\leftarrow$\textsc{BoundingBallSub}$(\mathcal{P}_{n-1},\mathcal{R})$
+\State $\mathcal{BB}(\mathcal{P}_{n-1}\cup\mathcal{R})\leftarrow$\textsc{BoundingBallInternal}$(\mathcal{P}_{n-1},\mathcal{R})$
 \If{$\boldsymbol{p}_{n}\in\mathcal{BB}(\mathcal{P}_{n-1}\cup\mathcal{R})$}
-  \State {\bf Return} $\mathcal{BB}(\mathcal{P}_{n-1}\cup\mathcal{R})$
+  \State {\bf return} $\mathcal{BB}(\mathcal{P}_{n-1}\cup\mathcal{R})$
+\Else
+  \State {\bf return} \textsc{BoundingBallInternal}$(\mathcal{P}_{n-1},\mathcal{R}\cup\left\{\boldsymbol{p}_{n}\right\})$
 \EndIf
-\State {\bf Return} \textsc{BoundingBallSub}$(\mathcal{P}_{n-1},\mathcal{R}\cup\left\{\boldsymbol{p}_{n}\right\})$
 \end{algorithmic}
 \end{algorithm}
 
+これら二つの再帰的手続きはよく似ていますが，Algorithm 2は$|\mathcal{P}_{n}|$が4以下にまで{\bf 減ったら}最小包含球の候補を更新するのに対し，Algorithm 3は$|\mathcal{R}|$が4まで{\bf 増えたら}最小包含球の候補を更新する，という点で性質が異なります．
+
+ここで次のような思考実験をしてみましょう．仮に$\mathcal{P}_{n}=\mathcal{P}$，$\mathcal{R}=\emptyset$として\textsc{BoundingBallInternal}を呼ぶと，まず$\mathcal{P}$から一つずつ点を減らして空集合になったところで\textsc{BoundingBallDirect}が呼ばれます．このときは$\mathcal{R}$も空集合ですので，最初の最小包含球の候補$\mathcal{B}_{0}$は数学的に意味を持たないものとなります．しかしこの$\mathcal{B}_{0}$に対して点の内外判定処理が定義されている（どのような点もこの球の外部の点と判定される）ならば，$\boldsymbol{p}_{1}\notin\mathcal{B}_{0}$ですので$\mathcal{R}\leftarrow\left\{\mathrm{P}_{1}\right\}$と更新され，この後は意味のある計算がなされることになります．
+
+すなわち，実質的に\textsc{BoundingBall}$(\mathcal{P}_{n})$は\textsc{BoundingBallInternal}$(\mathcal{P}_{n},\emptyset)$と等価な計算を行えることが分かります．したがって，Algorithm 2はAlgorithm 3に統合できる（最小包含球は\textsc{BoundingBallInternal}$(\mathcal{P},\emptyset)$より求まる）わけです．
+
+\subsection{アルゴリズムの計算量オーダー}
+
+\textsc{BoundingBallInternal}$(\mathcal{P}_{n})$の計算量オーダーを$c(n)$とおくと，
+\begin{align*}
+c(n)=O(1)+c(n-1)+\pi(\boldsymbol{p}_{n}\notin\mathcal{BB}(\mathcal{P}_{n-1}\cup\mathcal{R}))c(n-1)
+\end{align*}
+が言えます．ただし，$\pi(\boldsymbol{p}\notin\mathcal{B})$は点$\boldsymbol{p}$が球$\mathcal{B}$に{\bf 含まれない}確率です．
+
+$\pi(\boldsymbol{p}_{n}\notin\mathcal{BB}(\mathcal{P}_{n-1}\cup\mathcal{R}))$は，$\mathcal{R}$の要素数によって異なります．すなわち
+\begin{enumerate}
+\item{$\left|\mathcal{R}\right|=4$のとき，
+$\pi(\boldsymbol{p}_{n}\notin\mathcal{BB}(\mathcal{P}_{n-1}\cup\mathcal{R}))=0$
+}
+\item{$\left|\mathcal{R}\right|=3$のとき，
+$\pi(\boldsymbol{p}_{n}\notin\mathcal{BB}(\mathcal{P}_{n-1}\cup\mathcal{R}))=1/n$
+}
+\item{$\left|\mathcal{R}\right|=2$のとき，
+$\pi(\boldsymbol{p}_{n}\notin\mathcal{BB}(\mathcal{P}_{n-1}\cup\mathcal{R}))=2/n$
+}
+\item{$\left|\mathcal{R}\right|=1$のとき，
+$\pi(\boldsymbol{p}_{n}\notin\mathcal{BB}(\mathcal{P}_{n-1}\cup\mathcal{R}))=3/n$
+}
+\end{enumerate}
+となります．
+
+ここで，
+\begin{itemize}
+\item $kO(n)$=$O(kn)=O(n)$（$k$は$n$によらない定数）
+\item $O(n)/n$=$O(n)-1$
+\item $O(1)-1$=$O(1)$
+\end{itemize}
+ですから，上記漸化式は結局$\left|\mathcal{R}\right|$によらず
+\begin{align*}
+c(n)=O(1)+c(n-1)
+\end{align*}
+となります．したがって，$c(N)=NO(1)=O(N)$であると分かります．
+
+\section{実用上の問題と実装}
+
+\subsection{再帰的呼び出しを用いない}
+
+上記のアルゴリズムはとてもエレガントで効率が良いのですが，点を一つ取り出すごとに1回再帰的呼び出しをするので，$N$が数千〜数万になるとスタック上限に引っかかってしまいます．
+
+そこで，再帰的呼び出しを使う代わりに，自前のスタックを作りループの中でこれをpush/popすることで，それと等価な処理を行わせることを考えます．
+
+\textsc{BoundingBallInternal}は非常にシンプルな構造をしており，次のように機能分解出来ます．
+\begin{enumerate}
+\item $\mathcal{P}_{n}=\emptyset$または$|\mathcal{R}|=4$のときに最小包含球の候補を直接求める部分
+\item $\mathcal{P}_{n}$から$\mathrm{P}_{n}$を取り出し，{\bf 再帰的に}$\mathcal{BB}(\mathcal{P}_{n-1}\cup\mathcal{R})$を求める部分
+\item $\mathrm{P}_{n}$が最新の最小包含球候補の内部にあるか否かを判定し，
+  \begin{enumerate}
+  \item 内部にあれば，最新候補をそのまま返す部分
+  \item 外部にあれば，{\bf 再帰的に}$\mathcal{BB}(\mathcal{P}_{n-1}\cup(\mathcal{R}\cup\left\{\mathrm{P}_{n}\right\}))$を求める部分
+  \end{enumerate}
+\end{enumerate}
+上記のうち「再帰的に」と付いている部分は，点群を更新する（$\mathcal{P}_{n}$から$\mathrm{P}_{n}$を除く，$\mathcal{R}$に$\mathrm{P}_{n}$を加える）処理をしてから{\bf 頭に戻る}，と読み替えられます．また，この処理の後は点群を復元する（$\mathcal{P}_{n-1}$に$\mathrm{P}_{n}$を戻す，$\mathcal{R}$から$\mathrm{P}_{n}$を除く）処理が求められます．したがって，これらの処理（アクション）のうち{\bf 頭に戻ってから次にすべきは何（どれ）か}を正しく記憶しておけば，ループでも等価な処理が行えるわけです．
+
+アクションは次の3つにまとめられます．
+\begin{itemize}
+\item SAVE $\mathrm{P}_{n}$を一時的に$\mathcal{P}$から除く処理（最初の再帰呼び出し直前）
+\item CHECK $\mathrm{P}_{n}$の内外判定を行う処理（最初の再帰呼出し直後）
+\item REVERT $\mathrm{P}_{n}$を$\mathcal{P}$に戻し，同時に$\mathcal{R}$から除く処理（最後の再帰呼び出し直後）
+\end{itemize}
+これらを用いれば，
+\textsc{BoundingBallInternal}$(\mathcal{P},\mathcal{R})$と等価なアルゴリズムが次のAlgorithm 4のように書けます．
+
 \begin{algorithm}[h]
-\caption{\textsc{BoundingBallDirect}$(\mathcal{R})\rightarrow\mathcal{BB}(\mathcal{R})$}
+\caption{\textsc{BoundingBall}$(\mathcal{P})\rightarrow\mathcal{BB}(\mathcal{P})$}
 \begin{algorithmic}[1]
-\State $(\boldsymbol{p}_{\mathrm{C}},r)\leftarrow($nil$,\infty)$
-\For{$\forall (\boldsymbol{p}_{i},\boldsymbol{p}_{j})\in\mathcal{R}$}
-  \State $(\boldsymbol{p}_{\mathrm{C}}^{\prime},r^{\prime})\leftarrow$\textsc{BoundingBall2}$(\boldsymbol{p}_{i},\boldsymbol{p}_{j})$
-  \If{$r^{\prime}<r$}
-    \State $(\boldsymbol{p}_{\mathrm{C}},r)\leftarrow(\boldsymbol{p}_{\mathrm{C}}^{\prime},r^{\prime})$
+\State $\bar{\mathcal{P}}\leftarrow\emptyset$, $\mathcal{R}=\emptyset$, $\mathcal{S}\leftarrow\{\underbrace{\mbox{SAVE},\cdots,\mbox{SAVE}}_{N}\}$, $\bar{\mathcal{S}}=\emptyset$
+\While{{\bf true}}
+  \If{\textsc{NextAction}$(\mathcal{S})$=REVERT}
+    \State \textsc{PopExtreme}$(\mathcal{R})$
+    \State \textsc{ChangeNextAction}$(\mathcal{S},$SAVE$)$
+    \If{($\mathrm{P}(\boldsymbol{p})\leftarrow$\textsc{Revert}$(\mathcal{P},\bar{\mathcal{P}},\mathcal{S},\bar{\mathcal{S}})$)=nil}
+      \State {\bf return} $\mathcal{B}$
+    \EndIf
   \EndIf
-\EndFor
-\If{$\left|\mathcal{R}\right|\geq 3$}
-  \For{$\forall (\boldsymbol{p}_{i},\boldsymbol{p}_{j},\boldsymbol{p}_{k})\in\mathcal{R}$}
-    \State $(\boldsymbol{p}_{\mathrm{C}}^{\prime},r^{\prime})\leftarrow$\textsc{BoundingBall3}$(\boldsymbol{p}_{i},\boldsymbol{p}_{j},\boldsymbol{p}_{k})$
-    \If{$r^{\prime}<r$}
-      \State $(\boldsymbol{p}_{\mathrm{C}},r)\leftarrow(\boldsymbol{p}_{\mathrm{C}}^{\prime},r^{\prime})$
+  \If{$\mathcal{P}=\emptyset$ or $|\mathcal{R}|=4$}
+    $\mathcal{B}\leftarrow$\textsc{BoundingBallDirect}$(\mathcal{R})$
+    \If{($\mathrm{P}(\boldsymbol{p})\leftarrow$\textsc{Revert}$(\mathcal{P},\bar{\mathcal{P}},\mathcal{S},\bar{\mathcal{S}})$)=nil}
+      \State {\bf return} $\mathcal{B}$
     \EndIf
-  \EndFor
-\EndIf
-\If{$\left|\mathcal{R}\right|=4$}
-  \For{$(\boldsymbol{p}_{i},\boldsymbol{p}_{j},\boldsymbol{p}_{k},\boldsymbol{p}_{l})\in\mathcal{R}$}
-    \State $(\boldsymbol{p}_{\mathrm{C}}^{\prime},r^{\prime})\leftarrow$\textsc{BoundingBall4}$(\boldsymbol{p}_{i},\boldsymbol{p}_{j},\boldsymbol{p}_{k},\boldsymbol{p}_{l})$
-    \If{$r^{\prime}<r$}
-      \State $(\boldsymbol{p}_{\mathrm{C}},r)\leftarrow(\boldsymbol{p}_{\mathrm{C}}^{\prime},r^{\prime})$
+  \Else
+    \If{\textsc{NextAction}$(\mathcal{S})$=SAVE}
+      \State \textsc{Save}$(\mathcal{P},\bar{\mathcal{P}},\mathcal{S},\bar{\mathcal{S}},$CHECK$)$
+    \Else
+      \If{\textsc{NextAction}$(\mathcal{S})$=CHECK}
+        \If{$\boldsymbol{p}\in\mathcal{B}$}
+          \State \textsc{ChangeNextAction}$(\mathcal{S},$SAVE$)$
+          \If{($\mathrm{P}(\boldsymbol{p})\leftarrow$\textsc{Revert}$(\mathcal{P},\bar{\mathcal{P}},\mathcal{S},\bar{\mathcal{S}})$)=nil}
+            \State {\bf return} $\mathcal{B}$
+          \EndIf
+        \Else
+          \State \textsc{PushExtreme}$(\mathrm{P},\mathcal{R})$
+          \State \textsc{Save}$(\mathcal{P},\bar{\mathcal{P}},\mathcal{S},\bar{\mathcal{S}},$REVERT$)$
+        \EndIf
+      \EndIf
     \EndIf
-  \EndFor
-\EndIf
-\State {\bf Return} $\mathcal{B}(\boldsymbol{p}_{\mathrm{C}},r)$
+  \EndIf
+\EndWhile
 \end{algorithmic}
 \end{algorithm}
 
 ただし，
-$\mathcal{B}(\boldsymbol{p},r)$は中心座標$\boldsymbol{p}$および半径$r$の球，
-$\left|\mathcal{R}\right|$は$\mathcal{R}$の要素数をそれぞれ意味します．
+\begin{itemize}
+\item \textsc{NextAction}$(\mathcal{S})$は，$\mathcal{S}$の先頭アクションを参照する（$\mathcal{S}=\emptyset$ならばSAVEを返す）処理
+\item \textsc{ChangeNextAction}$(\mathcal{S},a)$は，$\mathcal{S}$の先頭アクションを$a$に上書きする処理
+\item \textsc{Save}$(\mathcal{P},\bar{\mathcal{P}},\mathcal{S},\bar{\mathcal{S}},a)$は，$\mathcal{P}$からpopした点$\mathrm{P}$を$\bar{\mathcal{P}}$にpushし，
+同時に$\mathcal{S}$からpopしたアクションを$a\in\{$SAVE,CHECK,REVERT$\}$に上書きして$\bar{\mathcal{S}}$にpushする処理
+\item \textsc{Revert}$(\mathcal{P},\bar{\mathcal{P}},\mathcal{S},\bar{\mathcal{S}})$は，$\bar{\mathcal{P}}$からpopした点$\mathrm{P}$を$\mathcal{P}$にpush（$\bar{\mathcal{P}}=\emptyset$ならばnilを返す）し，
+同時に$\bar{\mathcal{S}}$からpopしたアクションを$\mathcal{S}$にpushする処理
+\item \textsc{PushExtreme}$(\mathrm{P},\mathcal{R})$は，$\mathrm{P}$を$\mathcal{R}$にpushする処理
+\item \textsc{PopExtreme}$(\mathcal{R})$は，$\mathcal{R}$の先頭要素をpopする処理
+\end{itemize}
+です．$\mathcal{P}$，$\bar{\mathcal{P}}$，$\mathcal{R}$，$\mathcal{S}$，$\bar{\mathcal{S}}$は全てスタックであることを前提としています．
 
-$\boldsymbol{p}_{n}\notin\mathcal{BB}(\mathcal{P}_{n-1})$のとき
-$\boldsymbol{p}_{n}$は必ず$\mathcal{BB}(\mathcal{P}_{n})$の境界面上の点となる，
-ということが上記のアルゴリズムの根拠になっています．
-別の言い方をすれば，このとき$\boldsymbol{p}_{n}$は
-$\mathcal{BB}(\mathcal{P}_{n})$の中心からの最遠点ということになります．
-命題$\star$より，中心から遠い順に4つ点が見つかれば，
-それら4点の最小包含球が結局$\mathcal{BB}(\mathcal{P}_{n})$に一致すると言えるわけです．
+Algorithm 4は基本的に，$\mathcal{P}=\emptyset$または$|\mathcal{R}|=4$のときには最小包含球の候補を更新する，そうでないときには次のアクションに基づいてスタックを更新する，という構造ですが，後者のうちREVERTだけは，最小包含球の更新よりも前に\textsc{PopExtreme}を正しく発動する必要があるため，先に行っています．
 
+\subsection{元のアルゴリズムが低確率で失敗する問題について}
 
-\section{アルゴリズムの計算量オーダー}
+筆者も理解出来ていないのですが，
+元のアルゴリズムは点をSAVE/REVERTする順番によっては失敗することがあるようです（経験的に，発生確率は1{\%}未満です）．
+これについては，Welzl氏自身が共著となっている関連論文があります．
 
-前節で紹介したアルゴリズムの計算量オーダーを調べてみましょう．
-\textsc{BoundingBall}$(\mathcal{P}_{n})$の計算量を$c(n)$，
-\textsc{BoundingBallSub}$(\mathcal{P}_{n-1},\mathcal{R})$の計算量を$c_{\mathrm{s}}(n)$
-とそれぞれおくと，
-\begin{align*}
-c(n)&=O(1)+c(n-1)+\pi(\boldsymbol{p}_{n}\notin\mathcal{BB}(\mathcal{P}_{n-1}))c_{\mathrm{s}}(n-1) \\
-c_{\mathrm{s}}(n)&=O(1)+c_{\mathrm{s}}(n-1)+\pi(\boldsymbol{p}_{n}\notin\mathcal{BB}(\mathcal{P}_{n-1}\cup\mathcal{R}))c_{\mathrm{s}}(n-1)
-\end{align*}
-ただし，$\pi(\boldsymbol{p}\notin\mathcal{BB}(\mathcal{Q}))$は，
-点$\boldsymbol{p}$が$\mathcal{BB}(\mathcal{Q})$に含まれ\.{な}\.{い}確率です．
-$\pi(\boldsymbol{p}_{n}\notin\mathcal{BB}(\mathcal{P}_{n-1}))$が少なくとも$4/n$以下であることは，直感的に分かります．
-$\pi(\boldsymbol{p}_{n}\notin\mathcal{BB}(\mathcal{P}_{n-1}\cup\mathcal{R}))$および$c_{\mathrm{s}}(n-1)$は，
-$\mathcal{R}$の要素数によって異なります．
-すなわち命題$\star$により$\mathcal{R}$の要素数は高々4ですが，
-\begin{enumerate}
-\item{$\mathcal{R}$の要素数が4のとき，
-$\pi(\boldsymbol{p}_{n}\notin\mathcal{BB}(\mathcal{P}_{n-1}\cup\mathcal{R}))=0$
-かつ$c_{\mathrm{s}}(n-1)=0$
-}
-\item{$\mathcal{R}$の要素数が3のとき，
-$\pi(\boldsymbol{p}_{n}\notin\mathcal{BB}(\mathcal{P}_{n-1}\cup\mathcal{R}))=1/n$
-かつ$c_{\mathrm{s}}(n-1)=O(1)$
-}
-\item{$\mathcal{R}$の要素数が2のとき，
-$\pi(\boldsymbol{p}_{n}\notin\mathcal{BB}(\mathcal{P}_{n-1}\cup\mathcal{R}))=2/n$
-かつ$c_{\mathrm{s}}(n-1)=O(1)$
-}
-\item{$\mathcal{R}$の要素数が1のとき，
-$\pi(\boldsymbol{p}_{n}\notin\mathcal{BB}(\mathcal{P}_{n-1}\cup\mathcal{R}))=3/n$
-かつ$c_{\mathrm{s}}(n-1)=O(1)$
-}
-\end{enumerate}
-なので結局，$c_{\mathrm{s}}(n)$は$\mathcal{R}$の要素数によらず$O(1)$であると分かります．
-したがって，上記漸化式より$c(n)=O(n)$となります．
+Ji{\v{r}}{\'{i}} Matou{\v{s}}ek, Micha Sharir, and Emo Welzl, ``A subexponential bound for linear programming'', Algorithmica, Vol. 16, No. 4-5, pp. 498--516, 1996.
+
+これも著者自身の公開しているものが読めます．
+\url{https://people.inf.ethz.ch/emo/PublFiles/SubexLinProg_ALG16_96.pdf}
+
+実用的には，
+上記アルゴリズムで最小包含球を求めた後に，
+全点がそれの内部または境界上に含まれているか改めてチェックし，
+含まれていないものがあればそれを点群先頭に移して再度計算し直す，という方法で回避できます．
+このチェックも$O(N)$ですので，全体の計算量オーダーは変わらず$O(N)$のままです．
+
+\subsection{Zeoでの実装}
+
+Zeoでは，\verb|zeo_bv3d_bouningball.c|に最小包含球を求めるアルゴリズムを実装しています．関数は
+\begin{screen}
+\begin{verbatim}
+int zVec3DDataBoundingBallRecursive(zVec3DData *data, zSphere3D *bb, zVec3D **vp);
+int zVec3DDataBoundingBall(zVec3DData *pointdata, zSphere3D *bb, zVec3D **vp);
+\end{verbatim}
+\end{screen}
+で，前者が再帰的呼び出しを使ってオリジナルアルゴリズムをそのまま実装したもの，後者が再帰的呼び出しを使わず実装したものです．どちらも第1引数に与えられた点群`data`の最小包含球を求め，第2引数にアドレスが与えられた`zSphere3D`インスタンスに結果を代入します．第3引数は`zVec3D`ポインタへのポインタとなっており，これがNULLでない場合，境界（最小包含球の表面）上に乗る点（高々4個）へのポインタ配列が格納されます（したがって，元の配列サイズは4以上である必要があります）．返り値はいずれもその表面に乗っている点の数です．
+
+2次元版最小包含球（最小包含円）も，同様に\verb|zeo_bv2d_bouningball.c|に
+\begin{screen}
+\begin{verbatim}
+int zVec2DDataBoundingBallRecursive(zVec2DData *data, zDisk2D *bb, zVec2D **vp);
+int zVec2DDataBoundingBall(zVec2DData *pointdata, zDisk2D *bb, zVec2D **vp);
+\end{verbatim}
+\end{screen}
+として実装しています．引数の意味は3次元版と同じです．
+3次元の場合は球構造体`zSphere3D`，2次元の場合は円構造体`zDisk2D`をそれぞれ使っていることに注意して下さい．
+
+これらの実体は，\verb|zeo_bvxd_boundingball.h|に定義したマクロによって共通化されています（Zeoでは同様の書き方をしているものが幾つかあります．我ながらエキセントリックな書き方だと思います）．
 
 
 \end{document}
