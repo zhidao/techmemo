@@ -1,0 +1,209 @@
+﻿\documentclass[a4paper]{jsarticle}
+\usepackage[dvips]{graphicx}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{ascmac}
+\usepackage{algorithm,algpseudocode}
+\usepackage{svg}
+\usepackage{url}
+
+\flushbottom
+\sloppy
+
+\setlength{\paperwidth}{210mm}
+\setlength{\paperheight}{297mm}
+\setlength{\voffset}{0mm}
+\setlength{\hoffset}{0mm}
+\setlength{\textwidth}{\paperwidth}
+\addtolength{\textwidth}{-30mm}
+\setlength{\textheight}{\paperheight}
+\addtolength{\textheight}{-60mm}
+\setlength{\topmargin}{-1in}
+\addtolength{\topmargin}{20mm}
+\setlength{\headheight}{0mm}
+\setlength{\headsep}{0mm}
+\setlength{\footskip}{10mm}
+\setlength{\oddsidemargin}{-1in}
+\addtolength{\oddsidemargin}{15mm}
+\setlength{\columnsep}{7mm}
+
+\title{\bf 3次元点群の法線ベクトル推定をフルスクラッチで作ってみた}
+\author{\Large{\bf 杉原 知道}}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-\baselineskip}
+
+\section{はじめに}
+
+点群に構造を見出すのは，空間認識の主要な機能です．これに必要な基本計算の一つが，それぞれの点の近傍の局所的な曲面形状を推定することで，法線ベクトルはその曲面の1階微分量に相当します．
+
+法線ベクトル推定は，PCLやOpen3Dでも用意されている機能ですが，計算自体は基本的な処理の組み合わせだし，自前実装の方が使い勝手も良かろうということで作ってみました．コードは全てZeoに入っています．
+
+
+\section{計算の流れ}
+
+観測によって，ある点群$\mathcal{P}=\left\{\boldsymbol{p}_{i}\right\}$（$i=1,\cdots,N$）が得られたとします．このような点群は，一般的にはある曲面上に分布しているものと仮定できます（曲面の内部の点を観測できるのは特殊な条件下においてであるため）．
+それぞれの点$\boldsymbol{p}_{i}$におけるこの曲面の単位法線ベクトル$\boldsymbol{\nu}_{i}$を推定することが目的です．1点だけから面を推定することはできませんので，その近傍の点を集めて最小二乗法により面をフィッティングする，という方針をとります．
+
+曲面全体を推定するわけではないので，推定された接平面のどちら側が立体の内側/外側なのかは分かりません．この点は注意が必要です．視点の情報も使えば局所的にこれを判定することは可能ですが，本記事ではそのような方法は扱わず，点群のみが与えられるものとします．
+
+計算全体の流れは次のような疑似コードで書けます．
+\begin{algorithm}[h]
+\caption{\textsc{EstimateNormalVector}$(\mathcal{P})\rightarrow\mathcal{N}(\mathcal{P})$}
+\begin{algorithmic}[1]
+\State $\mathcal{N}\leftarrow\emptyset$
+\For{$\forall\boldsymbol{p}_{i}\in\mathcal{P}$}
+  \State $\mathcal{V}_{i}\leftarrow$\textsc{FindVicinity}$(\boldsymbol{p}_{i},\mathcal{P},r)$
+  \If{$|\mathcal{V}_{i}|\geq N_{\mathrm{Vmin}}$}
+    \State $(\boldsymbol{\nu}_{i},\boldsymbol{p}_{i})\leftarrow$\textsc{FitPlane}$(\boldsymbol{p}_{i},\mathcal{V}_{i})$
+  \Else
+    \State $\boldsymbol{\nu}_{i}=$void
+  \EndIf
+  \State $\mathcal{N}\leftarrow\mathcal{N}\cup\left\{\boldsymbol{\nu}_{i}\right\}$
+\EndFor
+\State {\bf return} $\mathcal{N}$
+\end{algorithmic}
+\end{algorithm}
+近傍点探索\textsc{FindVicinity}と，点群への平面フィッティング\textsc{FitPlane}がほぼ全てです．近傍点の数が閾値$N_{\mathrm{Vmin}}$（適当に設定します）に満たない場合には，推定を行わないものとしました．
+
+
+\section{Zeoでの実装}
+
+\subsection{近傍点探索}
+
+別記事にまとめているように，近傍点探索にはkd-treeやoctreeが使えます．そこでは，「点群の分布に偏りがある場合はoctreeの方が有利な可能性がある」と書きました．今は点群が元形状の表面上に分布していることを仮定しているので，偏りはあると考えられます．後ほど比較してみることにします．
+
+Zeoの関数としては，\verb|zVec3DTreeVicinity()|または\verb|zVec3DOctreeNN()|を用いることになります．点群がデータ構造\verb|zVec3DData|のインスタンスとして与えられていた場合，前者では\verb|zVec3DDataToTree()|を使って\verb|zVec3DTree|型インスタンスに，後者では\verb|zVec3DDataToOctree()|を使って\verb|zVec3DOctree|型インスタンスに，それぞれ変換する必要があります．
+
+
+\subsection{近傍点群への平面フィッティング}
+
+$\mathcal{V}_{i}=\left\{\boldsymbol{p}_{ij}\right\}$（$j=1,\cdots,N_{\mathrm{V}}$）に，点$\boldsymbol{p}_{i}$を通り単位法線ベクトルが$\boldsymbol{\nu}_{i}$である平面をフィッティングします．このような平面$\pi(\boldsymbol{p}_{i},\boldsymbol{\nu}_{i})$の方程式は，次のように書けます．
+\begin{align*}
+\pi(\boldsymbol{p}_{i},\boldsymbol{\nu}_{i})=\left\{\boldsymbol{p}\left|\boldsymbol{\nu}_{i}^{\mathrm{T}}(\boldsymbol{p}-\boldsymbol{p}_{i})=0\right.\right\}
+\end{align*}
+したがって最小二乗法を使えば，$\boldsymbol{\nu}_{i}$は次のように求まるでしょう．
+\begin{align*}
+\boldsymbol{\nu}_{i}=\mathop{\mathrm{arg~min}}_{\boldsymbol{\nu}}\left\{\left.
+\sum_{\boldsymbol{p}_{ij}\in\mathcal{V}_{i}}|\boldsymbol{\nu}^{\mathrm{T}}(\boldsymbol{p}_{ij}-\boldsymbol{p}_{i})|^{2}
+\right|\|\boldsymbol{\nu}\|=1
+\right\}
+\end{align*}
+これは，別記事でみた{\bf 3次元点群の主成分分析}そのものです．
+
+主軸方向は3個あり，しかもそれらは互いに直交するのでした．主成分（点群の分散共分散行列の固有値）が大きいほど，それに対応する主軸に沿った点群の分散が大きいということなので，1番大きい主成分に対応する主軸は点分布が最も広がっている方向，2番目に大きい主成分に対応する主軸は，それに直交するうちで点分布が最も広がっている方向を意味します．点が平面上に分布していると仮定するならば，これらこそがその平面を張る2本の軸となるわけです．したがって，残る最も小さい主成分に対応する主軸方向が，その平面の法線方向ということになります．
+
+法線をとる点の位置は$\boldsymbol{p}_{i}$と決まっていますので，別記事で紹介した\verb|zVec3DDataPCA()|を使っても良いのですが，これを内部で使って法線ベクトルを求める\verb|zVec3DDataMeanNormal()|という関数も用意されています．
+\begin{screen}
+\begin{verbatim}
+zVec3D *zVec3DDataMeanNormal(zVec3DData *data, const zVec3D *center, zVec3D *normal)
+{
+  double pc[3];
+  zVec3D pa[3];
+  int i;
+
+  if( !zVec3DDataPCA( data, center, pc, pa ) ) return NULL;
+  i = pc[0] < pc[1] ? ( pc[0] < pc[2] ? 0 : 2 ) : ( pc[1] < pc[2] ? 1 : 2 );
+  return zVec3DCopy( &pa[i], normal );
+}
+\end{verbatim}
+\end{screen}
+点群を\verb|data|，点$\boldsymbol{p}_{i}$の座標を\verb|center|としてそれぞれ与えると，\verb|normal|に単位法線ベクトルが入ります．
+
+\subsection{処理全体}
+
+上記疑似コードの\textsc{EstimateNormalVector}に対応する関数は，次のように実装しています．
+\begin{screen}
+\begin{verbatim}
+static zVec3D *_zVec3DDataNormalVecFromVicinity(zVec3DData *vicinity, const zVec3D *point, const zVec3D *center, zVec3D *normal)
+{
+  zVec3D d;
+
+  if( zVec3DDataSize(vicinity) < ZEO_VEC3DDATA_NORMALVEC_NUM_MIN )
+    ZRUNWARN( ZEO_WARN_VEC3DDATA_NORMAL_TOOFEWPOINTS );
+  if( zVec3DDataSize(vicinity) > ZEO_VEC3DDATA_NORMALVEC_NUM_MAX )
+    ZRUNWARN( ZEO_WARN_VEC3DDATA_NORMAL_TOOMANYPOINTS );
+  zVec3DDataMeanNormal( vicinity, point, normal );
+  zVec3DSub( point, center, &d );
+  if( zVec3DInnerProd( normal, &d ) < 0 )
+    zVec3DRevDRC( normal ); /* flip the normal vector to be outward (not a strict way) */
+  return normal;
+}
+
+zVec3DData *zVec3DDataNormalVec_Tree(zVec3DData *pointdata, double radius, zVec3DData *normaldata)
+{
+  zVec3DTree tree;
+  zVec3DData vicinity, *retval = NULL;
+  zVec3D *v, normal, center;
+
+  if( !zVec3DDataToTree( pointdata, &tree ) ) goto TERMINATE;
+  zVec3DDataBarycenter( pointdata, &center );
+  zVec3DDataInitList( normaldata );
+  zVec3DDataRewind( pointdata );
+  while( ( v = zVec3DDataFetch( pointdata ) ) ){
+    zVec3DDataInitAddrList( &vicinity );
+    if( !zVec3DTreeVicinity( &tree, v, radius, &vicinity ) ) goto TERMINATE;
+    _zVec3DDataNormalVecFromVicinity( &vicinity, v, &center, &normal );
+    if( !zVec3DDataAdd( normaldata, &normal ) ) goto TERMINATE;
+    zVec3DDataDestroy( &vicinity );
+  }
+  retval = normaldata;
+ TERMINATE:
+  zVec3DTreeDestroy( &tree );
+  return retval;
+}
+
+zVec3DData *zVec3DDataNormalVec_Octree(zVec3DData *pointdata, double radius, zVec3DData *normaldata)
+{
+  zVec3DOctree octree;
+  zAABox3D aabb;
+  zVec3DData vicinity, *retval = NULL;
+  zVec3D *v, normal, center;
+
+  zVec3DDataAABB( pointdata, &aabb, NULL );
+  if( !zVec3DDataToOctree( pointdata, &octree, zAABox3DXMin(&aabb), zAABox3DYMin(&aabb), zAABox3DZMin(&aabb), zAABox3DXMax(&aabb), zAABox3DYMax(&aabb), zAABox3DZMax(&aabb), radius ) )
+    goto TERMINATE;
+  zVec3DDataBarycenter( pointdata, &center );
+  zVec3DDataInitList( normaldata );
+  zVec3DDataRewind( pointdata );
+  while( ( v = zVec3DDataFetch( pointdata ) ) ){
+    zVec3DDataInitAddrList( &vicinity );
+    if( !zVec3DOctreeVicinity( &octree, v, radius, &vicinity ) ) goto TERMINATE;
+    _zVec3DDataNormalVecFromVicinity( &vicinity, v, &center, &normal );
+    if( !zVec3DDataAdd( normaldata, &normal ) ) goto TERMINATE;
+    zVec3DDataDestroy( &vicinity );
+  }
+  retval = normaldata;
+ TERMINATE:
+  zVec3DOctreeDestroy( &octree );
+  return retval;
+}
+
+zVec3DData *(* zVec3DDataNormalVec)(zVec3DData*, double, zVec3DData*) = zVec3DDataNormalVec_Octree;
+\end{verbatim}
+\end{screen}
+近傍点探索にkd-treeを使うものを\verb|zVec3DDataNormalVec_Tree()|，octreeを使うものを\verb|zVec3DDataNormalVec_Octree()|としてそれぞれ実装しました．これらはほとんど同じ骨格を持っていることが，お分かりになるかと思います．
+また，どちらを使うか特に意識しない人向けに\verb|zVec3DDataNormalVec|という関数ポインタも用意しています．上のコードの通り，デフォルトでは\verb|zVec3DDataNormalVec_Octree|を指すようにしています．
+引数\verb|pointdata|は点群，\verb|radius|は各点の近傍を定義する半径であり，推定された法線ベクトル群は\verb|normaldata|に保存されます．
+
+一箇所，説明が必要な処理があります．関数\verb|_zVec3DDataNormalVecFromVicinity()|の中で，\verb|zVec3DDataMeanNormal()|にて点\verb|point|における法線ベクトル\verb|normal|を推定した後に，点群重心から\verb|point|に向かって伸ばしたベクトルと\verb|normal|の挟角が90度を超えていた場合には，\verb|normal|を反転させています．これは簡易的に，点群の重心から\verb|point|に向かう方向を曲面の外側と判定するものです．
+重心から各点に向かって伸びる半直線がその点以外に曲面と交点を持たない場合には，この判定は正しいことが保証されますが，一般的にはそのようなことは言えません．この影響も後ほど見ることにします．
+
+
+\section{テスト}
+
+例によって，stanford bunnyに上記の関数を適用し，かかった時間を計測してみました．
+
+
+概ねうまく推定できているように見えます．しかし，耳のまわりをよく見てみると…
+
+
+ちょっと分かりにくいですが，耳の裏側の点群では，推定された法線が内側を向いてしまっています．前脚の上側の点群でも，同様のことが起こっていました．視点の情報を使わないならば，このような誤判定は免れません．
+
+
+\verb|clock()|関数を使って計算時間を簡易計測したところ，$k$d木版\verb|zVec3DDataNormalVec_Tree()|は414526クロック，八分木版\verb|zVec3DDataNormalVec_Octree()|は240461クロックでした．精度は高くありませんが，少なくともこの例では予想通り，八分木版の方が$k$d木版よりも5/3倍程度速かったと言えます．
+
+
+
+\end{document}

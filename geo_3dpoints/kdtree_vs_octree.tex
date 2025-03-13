@@ -1,0 +1,456 @@
+﻿\documentclass[a4paper]{jsarticle}
+\usepackage[dvips]{graphicx}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{ascmac}
+\usepackage{algorithm,algpseudocode}
+\usepackage{svg}
+\usepackage{url}
+
+\flushbottom
+\sloppy
+
+\setlength{\paperwidth}{210mm}
+\setlength{\paperheight}{297mm}
+\setlength{\voffset}{0mm}
+\setlength{\hoffset}{0mm}
+\setlength{\textwidth}{\paperwidth}
+\addtolength{\textwidth}{-30mm}
+\setlength{\textheight}{\paperheight}
+\addtolength{\textheight}{-60mm}
+\setlength{\topmargin}{-1in}
+\addtolength{\topmargin}{20mm}
+\setlength{\headheight}{0mm}
+\setlength{\headsep}{0mm}
+\setlength{\footskip}{10mm}
+\setlength{\oddsidemargin}{-1in}
+\addtolength{\oddsidemargin}{15mm}
+\setlength{\columnsep}{7mm}
+
+\title{\bf 比較，kd-treeとoctree}
+\author{\Large{\bf 杉原 知道}}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-\baselineskip}
+
+\section{はじめに}
+
+点間の距離計算が頻繁に求められる事例においては，それを効率良くできるように点群の空間配置を表現することが重要です．常道として用いられるのは{\bf $k$d木（kd-tree）}と{\bf 八分木（octree）}です．どちらもよく知られたものですが，結局どちらを使えば良いのか？は当然気になるところです．それに答えるために，Zeoでの実装を紹介しつつ，最近傍点探索と$r$近傍点群探索の二つの評価結果を比較してみようというのが本記事の趣旨です．
+
+$k$d木＝任意の$k$次元の木ですが，実質的にその構造が意味を持つのはデカルト空間においてくらいだし，$k$があまり大きくなると計算効率も落ちるので，実用上は$k=3$と思ってほとんど差し支えありません．また，octreeは元来デカルト空間に特化した表現です．したがって，{\bf 本記事で言う点群とはデカルト空間における点群のこと}ですので，ご注意下さい．
+
+
+\section{Zeoのkd-tree実装}
+
+\subsection{データ型の定義と点の追加処理}
+
+kd-treeのデータ型は，次のように定義しています．
+\begin{screen}
+\begin{verbatim}
+typedef struct{
+  int id;          /*!< identifier of a tree node */
+  zAxis split;     /*!< split axis index */
+  zVec3D point;    /*!< spliting vertex */
+  zAABox3D region; /*!< region to cover */
+} zVec3DTreeData;
+
+typedef struct __zVec3DTree{
+  struct __zVec3DTree *parent;
+  struct __zVec3DTree *child[2];
+  uint size;
+  zVec3DTreeData data;
+} zVec3DTree;
+\end{verbatim}
+\end{screen}
+\verb|zVec3DTreeData|のメンバ変数\verb|split|が，領域の分離軸IDになります．
+\verb|zAxis|は列挙型で，0が$x$軸，1が$y$軸，2が$z$軸にそれぞれ対応します．
+\verb|point|には3次元の点の座標が入り，この点を通るように分離軸が定められます．
+\verb|region|は当該ノードがカバーする直方体領域を規定する構造体で，その型\verb|zAABox3D|（Axis-Aligned Box）は次のように定義されます．
+\begin{screen}
+\begin{verbatim}
+typedef struct{
+  zVec3D min; /*!< minimum coordinates */
+  zVec3D max; /*!< maximum coordinates */
+} zAABox3D;
+\end{verbatim}
+\end{screen}
+各ノードが分離軸の座標値さえ持っていれば，根元側の値を伝播することでカバー領域を知ることは出来るので，全ての値を持たせるのは冗長ではあるのですが，領域判定を単純にするために導入しました．
+最初のメンバ変数\verb|id|はおまけで，後述するように同一の木の中で何番目に生成されたノードかを保存するようにしています．kd-treeと配列の相互変換を実装するための措置ですが，無くても支障はありません．
+
+\verb|zVec3DTree|は，実際には上記のコードを直接書いているわけではなく，ZEDAの\verb|zTreeClass()|マクロで生成しています．これはノードのデータ型と同時に，初期化関数\verb|zVec3DTreeInit()|，破棄関数\verb|zVec3DTreeDestroy()|，ノード生成関数\verb|zVec3DTreeNodeAlloc()|まで自動生成するものです．それらの関数の中身については割愛し，肝心の木に点を追加する処理を次に示します．
+\begin{screen}
+\begin{verbatim}
+static zVec3DTree *_zVec3DTreeCreateLeaf(zAxis split, const zVec3D *point, int id)
+{
+  zVec3DTree *leaf;
+
+  if( !( leaf = zAlloc( zVec3DTree, 1 ) ) ){
+    ZALLOCERROR();
+    return NULL;
+  }
+  leaf->size = 1;
+  leaf->data.id = id;
+  leaf->data.split = split;
+  zVec3DCopy( point, &leaf->data.point );
+  leaf->child[0] = leaf->child[1] = NULL;
+  return leaf;
+}
+
+static int _zVec3DTreeChooseBranch(const zVec3DTree *node, const zVec3D *point)
+{
+  return point->e[(int)node->data.split] >= node->data.point.e[(int)node->data.split] ? 0 : 1;
+}
+
+static zVec3DTree *_zVec3DTreeAddPoint(zVec3DTree *node, const zVec3D *point, int id)
+{
+  int b;
+  zVec3DTree *leaf;
+
+  node->size++;
+  if( node->child[( b = _zVec3DTreeChooseBranch( node, point ) )] )
+    return _zVec3DTreeAddPoint( node->child[b], point, id );
+  if( !( leaf = _zVec3DTreeCreateLeaf( ( node->data.split + 1 ) % 3, point, id ) ) )
+    return NULL;
+  node->child[b] = leaf;
+  zAABox3DCopy( &node->data.region, &leaf->data.region );
+  if( b == 0 )
+    leaf->data.region.min.e[(int)node->data.split] = node->data.point.e[(int)node->data.split];
+  else /* b == 1 */
+    leaf->data.region.max.e[(int)node->data.split] = node->data.point.e[(int)node->data.split];
+  return leaf;
+}
+
+zVec3DTree *zVec3DTreeAddPoint(zVec3DTree *tree, const zVec3D *point)
+{
+  if( tree->data.split == zAxisInvalid ){
+    tree->size = 1;
+    tree->data.id = 0;
+    tree->data.split = zX;
+    zVec3DCopy( point, &tree->data.point );
+    return tree;
+  }
+  return _zVec3DTreeAddPoint( tree, point, tree->size );
+}
+\end{verbatim}
+\end{screen}
+処理の本体は，再帰的に領域を絞り込んで与えられた点を登録する関数\verb|_zVec3DTreeAddPoint()|です．特に難しいことはやっていませんが，葉ノードを新たに生成する際に，親ノードの\verb|split|の値を1増やして3で割った余りを\verb|split|の値としているところがポイントでしょうか．こうすることで，根から葉に向かって分離軸が$x$→$y$→$z$→$x$→$\cdots$ と順番に変わっていきます．
+
+※分割された直方体領域の最も長い辺に沿った軸で分割するという流儀もありますが，$-\infty$ / $\infty$を領域境界にとることを許容しているため，処理がややこしくなるのを避けて最も簡単な規則を採用しました．
+
+葉ノードの領域は，いったん親ノードの領域をコピーした後，分離軸に沿った最小値or最大値（どちらにするかは，点がどちらの領域に属するかで変わります）を，その点の分離軸成分に置き換えるようにしています．点が存在しない領域に対応するノードは生成されません．
+
+ノードのメンバ変数\verb|size|には，自分自身を含めた部分木のノード数が入りますので，\verb|id|には，そのノードが木全体で何番目に作られたものであるかを示す番号が入ることになります．繰り返しになりますが，これらは無くても木構造の操作に支障はありません．
+
+
+\subsection{最近傍点探索}
+
+kd-treeを用いて，与えられた点\verb|point|に最も近い点群中の点を見つける処理（最近傍点探索）を，次に示します．
+\begin{screen}
+\begin{verbatim}
+#define _zVec3DTreeIsOverlap(node,point,radius_sqr) ( zAABox3DSqrDistFromPoint( &node->data.region, point ) < (radius_sqr) )
+
+static void _zVec3DTreeNNTest(const zVec3DTree *node, const zVec3D *point, zVec3DTree **nn, double *dmin)
+{
+  double d_sqr;
+
+  if( ( d_sqr = zVec3DSqrDist( &node->data.point, point ) ) < _zSqr(*dmin) ){
+    *nn = (zVec3DTree *)node;
+    *dmin = sqrt( d_sqr );
+  }
+}
+
+static double _zVec3DTreeNNOpp(const zVec3DTree *node, const zVec3D *point, zVec3DTree **nn, double *dmin)
+{
+  _zVec3DTreeNNTest( node, point, nn, dmin );
+  if( node->child[0] && _zVec3DTreeIsOverlap( node->child[0], point, _zSqr(*dmin) ) )
+    _zVec3DTreeNNOpp( node->child[0], point, nn, dmin );
+  if( node->child[1] && _zVec3DTreeIsOverlap( node->child[1], point, _zSqr(*dmin) ) )
+    _zVec3DTreeNNOpp( node->child[1], point, nn, dmin );
+  return *dmin;
+}
+
+static double _zVec3DTreeNN(const zVec3DTree *node, const zVec3D *point, zVec3DTree **nn, double *dmin)
+{
+  int b;
+  zVec3DTree *ob; /* opposite branch */
+
+  if( node->child[( b = _zVec3DTreeChooseBranch( node, point ) )] )
+    _zVec3DTreeNN( node->child[b], point, nn, dmin );
+  _zVec3DTreeNNTest( node, point, nn, dmin );
+  ob = node->child[1-b];
+  if( ob && _zVec3DTreeIsOverlap( ob, point, _zSqr(*dmin) ) )
+    _zVec3DTreeNNOpp( ob, point, nn, dmin );
+  return *dmin;
+}
+
+double zVec3DTreeNN(const zVec3DTree *tree, const zVec3D *point, zVec3DTree **nn)
+{
+  double dmin = HUGE_VAL;
+
+  *nn = NULL;
+  return _zVec3DTreeNN( tree, point, nn, &dmin );
+}
+\end{verbatim}
+\end{screen}
+基本的には，
+\begin{enumerate}
+\item 与えられた点\verb|point|がある側のノードを辿っていって，距離が最小となる点\verb|nn|を見つける
+\item その時の\verb|point|と\verb|nn|の距離を\verb|dmin|とする
+\item \verb|point|がない側の直方体領域と，\verb|point|を中心とする半径\verb|dmin|の球が重なっていたら，そちらのノードも辿っていって，より近い点が無いか確認する
+\end{enumerate}
+という流れになっています．関数\verb|_zVec3DTreeNN()|が，\verb|point|の存在する側のノードを再帰的に探索する処理，\verb|_zVec3DTreeNNOpp()|が，その反対側のノードを同様に再帰的に探索する処理です．
+
+直方体領域と球が重なっているか判定する処理に使っている\verb|zAABox3DSqrDistFromPoint()|は，次のように定義されています．
+\begin{screen}
+\begin{verbatim}
+double zAABox3DSqrDistFromPoint(const zAABox3D *box, const zVec3D *point)
+{
+  int i;
+  double d2 = 0;
+
+  for( d2=0, i=zX; i<=zZ; i++ ){
+    if( point->e[i] < box->min.e[i] )
+      d2 += zSqr( point->e[i] - box->min.e[i] );
+    else
+    if( point->e[i] > box->max.e[i] )
+      d2 += zSqr( point->e[i] - box->max.e[i] );
+  }
+  return d2;
+}
+\end{verbatim}
+\end{screen}
+
+
+\subsection{$r$近傍点探索}
+
+$r$近傍点探索は，与えられた点からの距離が$r$未満である点を集めた部分点群を作る処理です．
+\begin{screen}
+\begin{verbatim}
+static bool _zVec3DTreeVicinityTest(const zVec3DTree *node, const zVec3D *p, double radius_sqr, zVec3DData *vicinity)
+{
+  if( zVec3DSqrDist( &node->data.point, p ) < radius_sqr ){
+    if( !zVec3DDataAdd( vicinity, &node->data.point ) ) return false;
+  }
+  return true;
+}
+
+static zVec3DData *_zVec3DTreeVicinityOpp(zVec3DTree *node, const zVec3D *point, double radius_sqr, zVec3DData *vicinity)
+{
+  if( !_zVec3DTreeVicinityTest( node, point, radius_sqr, vicinity ) ) return NULL;
+  if( node->child[0] && _zVec3DTreeIsOverlap( node->child[0], point, radius_sqr ) )
+    if( !_zVec3DTreeVicinityOpp( node->child[0], point, radius_sqr, vicinity ) ) return NULL;
+  if( node->child[1] && _zVec3DTreeIsOverlap( node->child[1], point, radius_sqr ) )
+    if( !_zVec3DTreeVicinityOpp( node->child[1], point, radius_sqr, vicinity ) ) return NULL;
+  return vicinity;
+}
+
+static zVec3DData *_zVec3DTreeVicinity(const zVec3DTree *tree, const zVec3D *point, double radius_sqr, zVec3DData *vicinity)
+{
+  int b;
+  zVec3DTree *ob; /* opposite branch */
+
+  if( tree->child[( b = _zVec3DTreeChooseBranch( tree, point ) )] )
+    if( !_zVec3DTreeVicinity( tree->child[b], point, radius_sqr, vicinity ) ) return NULL;
+  if( !_zVec3DTreeVicinityTest( tree, point, radius_sqr, vicinity ) ) return NULL;
+  ob = tree->child[1-b];
+  if( ob && _zVec3DTreeIsOverlap( ob, point, radius_sqr ) )
+    if( !_zVec3DTreeVicinityOpp( ob, point, radius_sqr, vicinity ) ) return NULL;
+  return vicinity;
+}
+
+zVec3DData *zVec3DTreeVicinity(const zVec3DTree *tree, const zVec3D *point, double radius, zVec3DData *vicinity)
+{
+  zVec3DDataInitAddrList( vicinity );
+  return _zVec3DTreeVicinity( tree, point, _zSqr(radius), vicinity );
+}
+\end{verbatim}
+\end{screen}
+一番下の\verb|zVec3DTreeVicinity()|が直接呼び出すべき関数で，\verb|vicinity|を\verb|zVec3D|ポインタのリストとして初期化してから，与えられた点\verb|point|からの距離が\verb|radius|未満の点を全て探し出し，\verb|vicinity|に登録します．
+
+まずは\verb|point|が属する領域のノードを再帰的に探し，それぞれのノードに保存されている点と\verb|point|との距離が\verb|radius|以下であれば，\verb|vicinity|に追加します．また，反対側の領域のノードについても，をの直方体領域と\verb|point|を中心とする半径\verb|radius|の球が重なっているならば確認します．最近傍点探索の時と考え方はほぼ同じであることが，お分かり頂けると思います．
+
+
+\section{Zeoのoctree実装}
+
+\subsection{データ型の定義と点の追加処理}
+
+octreeのデータ型については，別記事「分解能可変octreeを作ったよ」で紹介しています．空間分割数を可変にする趣旨で作ったもので，いわゆるMorton数を使った高速領域探索はしていませんので，ご注意下さい．octreeのノードはオクタント(octant)，その子ノードはサブオクタント(suboctant)ともそれぞれ呼ばれます．
+
+
+\subsection{最近傍点探索}
+
+octreeを使っても，最近傍点を効率良く探索することが出来ます．
+
+まず，与えられた点\verb|point|が存在する葉ノードを探索する関数を示します．
+\begin{screen}
+\begin{verbatim}
+static const zVec3DOctant *_zVec3DOctantFindContainer(const zVec3DOctant *octant, const zVec3D *point)
+{
+  int i;
+  const zVec3DOctant *suboctant;
+
+  if( !octant ) return NULL;
+  if( !_zVec3DOctantPointIsInside( octant, point ) ) return NULL;
+  for( i=0; i<8; i++ )
+    if( ( suboctant = _zVec3DOctantFindContainer( octant->suboctant[i], point ) ) ) return suboctant;
+  return octant;
+}
+
+const zVec3DOctant *zVec3DOctreeFindContainer(const zVec3DOctree *octree, const zVec3D *point)
+{
+  return _zVec3DOctantFindContainer( &octree->root, point );
+}
+\end{verbatim}
+\end{screen}
+再帰的に定義された\verb|_zVec3DOctantFindContainer()|が本体で，
+\begin{enumerate}
+\item \verb|octant|がNULLポインタならNULLを返す
+\item \verb|point|が直方体領域内になければNULLを返す
+\item \verb|suboctant|のうち返り値がNULLでないものがあれば，その返り値を返す
+\item 上記のいずれでも無ければ\verb|octant|自身を返す
+\end{enumerate}
+という処理で葉ノードを見つけ出します．
+
+最近傍点探索は，まず上記の関数を使って最初の最近傍点候補を見つけることから始めます．
+\begin{screen}
+\begin{verbatim}
+static double _zVec3DOctantLeafNN(const zVec3DOctant *octant, const zVec3D *point, zVec3D **nn, double *dmin)
+{
+  zVec3DListCell *cp;
+  double d_sqr;
+
+  zListForEach( &octant->points, cp ){
+    if( ( d_sqr = zVec3DSqrDist( &cp->data, point ) ) < _zSqr(*dmin) ){
+      *nn = &cp->data;
+      *dmin = sqrt( d_sqr );
+    }
+  }
+  return *dmin;
+}
+
+static double _zVec3DOctantNN(const zVec3DOctant *octant, const zVec3D *point, zVec3D **nn, double *dmin)
+{
+  int i;
+
+  if( !zListIsEmpty( &octant->points ) )
+    return _zVec3DOctantLeafNN( octant, point, nn, dmin );
+  for( i=0; i<8; i++ ){
+    if( !octant->suboctant[i] ) continue;
+    if( zAABox3DSqrDistFromPoint( &octant->suboctant[i]->region, point ) > _zSqr(*dmin) ) continue;
+    _zVec3DOctantNN( octant->suboctant[i], point, nn, dmin );
+  }
+  return *dmin;
+}
+
+double zVec3DOctreeNN(const zVec3DOctree *octree, const zVec3D *point, zVec3D **nn)
+{
+  double dmin = HUGE_VAL;
+  const zVec3DOctant *container;
+
+  if( ( container = zVec3DOctreeFindContainer( octree, point ) ) )
+    _zVec3DOctantLeafNN( container, point, nn, &dmin );
+  return _zVec3DOctantNN( &octree->root, point, nn, &dmin );
+}
+\end{verbatim}
+\end{screen}
+考え方はkd-treeとほぼ一緒で，与えられた点\verb|point|が存在しないノード（最大7つあります）と，\verb|point|を中心とし半径が最新の最近傍点候補\verb|nn|との距離\verb|dmin|に等しい球とが重なっていれば，それらも探索します．
+
+kd-treeでは，全てのノードそれぞれにただ一つの点が関連付けられていますが，octreeでは葉ノードにしか点が存在しません．したがって，まず一つの葉ノードに着目して最初の最近傍点候補を見つけなければいけません．そのような葉ノードとしては，与えられた点を含む領域に対応するものを選ぶのが妥当だろう…ということで上記のような処理になっています．
+
+\subsection{$r$近傍点探索}
+
+octreeを使った$r$近傍点探索処理を示します．
+\begin{screen}
+\begin{verbatim}
+static zVec3DData *_zVec3DOctantVicinity(zVec3DOctant *octant, const zVec3D *point, double radius_sqr, zVec3DData *vicinity)
+{
+  int i;
+  zVec3DListCell *cp;
+
+  if( zAABox3DSqrDistFromPoint( &octant->region, point ) >= radius_sqr ) return vicinity;
+  if( !zListIsEmpty( &octant->points ) ){
+    zListForEach( &octant->points, cp )
+      if( zVec3DSqrDist( &cp->data, point ) < radius_sqr )
+        if( !zVec3DDataAdd( vicinity, &cp->data ) ) return NULL;
+    return vicinity;
+  }
+  for( i=0; i<8; i++ ){
+    if( !octant->suboctant[i] ) continue;
+    if( !_zVec3DOctantVicinity( octant->suboctant[i], point, radius_sqr, vicinity ) ) return NULL;
+  }
+  return vicinity;
+}
+
+zVec3DData *zVec3DOctreeVicinity(zVec3DOctree *octree, const zVec3D *point, double radius, zVec3DData *vicinity)
+{
+  zVec3DDataInitAddrList( vicinity );
+  return _zVec3DOctantVicinity( &octree->root, point, _zSqr(radius), vicinity );
+}
+\end{verbatim}
+\end{screen}
+こちらはよりシンプルで，
+\begin{enumerate}
+\item 与えられた点\verb|point|から着目しているノード（オクタント）\verb|octant|領域までの距離が\verb|radian|以上ならば何もしない
+\item \verb|octant|が葉ノードならば，その中に含まれる全ての点のうち\verb|point|からの距離が\verb|radian|未満のものを全て\verb|vicinity|に登録する
+\item 葉ノードで無いならば，高々7個の\verb|suboctant|について再帰的に探索する
+\end{enumerate}
+という処理になっています．直方体領域と球が重なっているか判定する処理には，kd-treeと同じく\verb|zAABox3DSqrDistFromPoint()|を使っています．
+
+
+\section{kd-treeとoctreeの性能比較}
+
+\subsection{最近傍点探索}
+
+最近傍点探索のやり方は，kd-treeもoctreeも似ています．性能比較のために，$(-10,-10,-10)$-$(10,10,10)$の直方体領域内に100000個の点を乱数的に生成し，それとは別に乱数的に生成した点からの最近傍点を，全探索（brute-force），octree，kd-treeそれぞれの方法で求めるという条件で，計算を100回行い\verb|clock()|関数で時間計測してみました．なお，octreeの空間分解能は$1\times1\times1$としました．
+結果を次に示します．
+\begin{figure*}[h]
+\centering
+\includesvg[width=.4\textwidth]{fig/nearest-neighbor-search_result.1.svg}
+\end{figure*}
+\verb|clock()|関数なので精度は良くありませんが，傾向は十分捉えられているかと思います．
+
+まず，octreeもkd-treeも全探索に比べればはるかに効率が良いことがひと目で分かります．ただ，octreeは総じてkd-treeよりも遅く，時々全探索と同オーダーの時間がかかってしまうこともあるようです．念のため，これらの解が全て一致していることは確認しています．
+
+また，octreeの空間分解能を$0.5\times0.5\times0.5$としたときの結果を示します．
+\begin{figure*}[h]
+\centering
+\includesvg[width=.4\textwidth]{fig/nearest-neighbor-search_result.05.svg}
+\end{figure*}
+探索効率が格段に悪くなっていることが分かります．分解能を逆に落としていくと全探索に近づくので，点分布に依存した最適な分解能が存在することになりますが，これを見つけるのは簡単では無さそうです．
+
+
+\subsection{$r$近傍点探索}
+
+$r$近傍点探索についても調べました．点群生成条件と試行回数は先程と同じ，octreeの空間分解能も同じく$1\times1\times1$とし，$r$は$1$としました．
+結果を示します．
+\begin{figure*}[h]
+\centering
+\includesvg[width=.4\textwidth]{fig/vicinity-search_result.dense.svg}
+\end{figure*}
+念のため，これも全ての解が一致していることは確認しています．今度もoctreeの方がkd-treeよりも総じて遅いのですが，差は小さくなっており，kd-treeの方が時間がかかっている例もあります．
+
+さらに，点群を直方体領域で一様に分布させるのではなく，中心座標$(5,5,5)$，半径$4$の球面上で一様に分布するように生成してみました．点の数は10000に減らしています．他の条件は全て同じです．このときの結果を示します．
+\begin{figure*}[h]
+\centering
+\includesvg[width=.4\textwidth]{fig/vicinity-search_result.sphere.svg}
+\end{figure*}
+この条件では，kd-treeの方が総じてoctreeよりも遅くなると分かります．何箇所か時間が突出しているのは，$r$近傍点が存在したケースです．つまり，ほとんど場合では$r$近傍点が無かったということになります．このとき，計算時間の多くは近傍点リストに新たな点を登録するためのメモリ操作に費やしていることが分かりました．
+
+\subsection{考察というほどでもないもの}
+
+上記の結果から，次のことが言えそうです．
+\begin{itemize}
+\item 最近傍点探索はkd-treeの方が有利
+\item octreeによる最近傍点探索の効率は，空間分解能の設定に大きく依存
+\item 一般的なケースでの$r$近傍点探索は，kd-treeとoctreeで大きな性能差は無い
+\item $r$近傍点探索において，点群の分布に偏りがある場合はoctreeの方が有利な可能性がある
+\end{itemize}
+点群配置と計算効率の関係については，もっと条件を変えて調べないとなんとも言えないところがありますが，使用時の目安にはなるかと思います．
+
+
+
+
+
+
+\end{document}

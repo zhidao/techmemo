@@ -33,6 +33,8 @@
 \maketitle
 \vspace{-\baselineskip}
 
+\section{最大速度が与えられている場合に移動時間を求める}
+
 \begin{figure}[th]
 \begin{center}
 \includesvg[width=.5\textwidth]{velocity_profile_trapezoidal.svg}
@@ -52,22 +54,28 @@ v_{\mathrm{M}}-a(T-T_{2})&=v_{2}
 \end{align}
 が成り立つので，
 \begin{align}
-T_{1}&=\frac{v_{\mathrm{M}}-v_{1}}{a} \\
+T_{1}&=\frac{v_{\mathrm{M}}-v_{1}}{a}
+\label{eq:t1_from_vel}
+\\
 T-T_{2}&=\frac{v_{\mathrm{M}}-v_{2}}{a}
+\label{eq:t2_from_vel}
 \end{align}
 を得る．
 時刻$t=0\sim T_{1}$での移動距離$d_{1}$は
 \begin{align}
 d_{1}=v_{1}T_{1}+\frac{1}{2}aT_{1}^{2}
+\label{eq:d1}
 \end{align}
 であり，時刻$t=T_{2}\sim T$での移動距離$d_{3}$は
 \begin{align}
 d_{3}=v_{2}(T-T_{2})+\frac{1}{2}a(T-T_{2})^{2}
+\label{eq:d3}
 \end{align}
 である．
 速度が一定値$v_{\mathrm{M}}$である時刻$t=T_{1}\sim T_{2}$での移動距離を考えると
 \begin{align}
-D-d_{1}-d_{3}=v_{\mathrm{M}}(T_{2}-T_{1})
+D=d_{1}+d_{3}+v_{\mathrm{M}}(T_{2}-T_{1})
+\label{eq:total_distance}
 \end{align}
 が成り立つ，すなわち
 \begin{align}
@@ -102,8 +110,8 @@ D-\frac{1}{2}a(T-t)^{2} & (T_{2}\leq t\leq T)
 \end{center}
 \end{figure}
 
-上記において，$T_{1}$，$T_{2}$は$T_{1}\leq T_{2}$を満たしていなければならない．
-もし$T_{2}<T_{1}$となっているならば，速度が$v_{\mathrm{M}}$に達することなく距離$D$移動できるということを意味する．
+上記においてもし$T_{2}<T_{1}$となっているならば，
+速度が$v_{\mathrm{M}}$に達することなく距離$D$移動できるということを意味する．
 この場合，
 初期速度$v_{1}$から時刻$T^{\prime}$まで加速度$a$（$>0$）で加速し，
 その直後に加速度$-a$に転じて時刻$T$まで減速して終端速度$v_{2}$に至る，
@@ -147,6 +155,67 @@ v_{\mathrm{M}}^{\prime}=\sqrt{\frac{v_{1}^{2}+v_{2}^{2}+2aD}{2}}
 これを上式に代入すれば，$T^{\prime}$および$T$が順次得られる．
 $T_{1}=T_{2}=T^{\prime}$とすれば，
 時刻に対する移動距離$d(t)$は先のものと同一になる．
+
+
+%% \section{移動時間が与えられている場合に最大速度を求める}
+
+%% 前節と同じく，
+%% 初期速度$v_{1}$から時刻$T_{1}$まで加速度$a$（$>0$）で加速して$v_{\mathrm{M}}$に至り，
+%% その後の時刻$T_{2}$に加速度$-a$で減速を開始して時刻$T$に終端速度$v_{2}$に至る，
+%% かつその間の移動距離が$D$となるよう速度変化させることにする．
+%% ただし，今度は時刻$T_{1}$，$T_{2}$および最大速度$v_{\mathrm{M}}$を求めたい．
+%% $T$を含め，他の変数は全て与えられるものとする．
+%% 速度の条件
+%% \begin{align}
+%% T_{1}&=\frac{v_{\mathrm{M}}-v_{1}}{a}
+%% \tag{\ref{eq:t1_from_vel}}
+%%  \\
+%% T-T_{2}&=\frac{v_{\mathrm{M}}-v_{2}}{a}
+%% \tag{\ref{eq:t2_from_vel}}
+%% \end{align}
+%% と移動距離の条件
+%% \begin{align}
+%% \frac{1}{2}(v_{1}+v_{\mathrm{M}})T_{1}
+%% +v_{\mathrm{M}}(T_{2}-T_{1})
+%% +\frac{1}{2}(v_{2}+v_{\mathrm{M}})(T-T_{2})
+%% =D
+%% \end{align}
+%% が同様に成り立つ．
+%% これらより$T_{1}$，$T_{2}$を消去すると
+%% \begin{align}
+%% v_{\mathrm{M}}^{2}-2\cdot\frac{aT+v_{1}+v_{2}}{2}v_{\mathrm{M}}+\frac{2aD+v_{1}^{2}+v_{2}^{2}}{2}=0
+%% \end{align}
+%% となる．
+%% これを$v_{\mathrm{M}}(>0)$について解けば，
+%% \begin{align}
+%% v_{\mathrm{M}}
+%% =
+%% \frac{aT+v_{1}+v_{2}}{2}
+%% +\sqrt{
+%% \left(\frac{aT+v_{1}+v_{2}}{2}\right)^{2}-\frac{2aD+v_{1}^{2}+v_{2}^{2}}{2}
+%% }
+%% \end{align}
+%% を得る．
+%% $v_{\mathrm{M}}$が虚数となるときは，
+%% 時刻$T$までに距離$D$は移動できないということを意味する．
+
+
+%% \begin{align}
+%% v_{\mathrm{M}}=\frac{aT+v_{1}+v_{2}}{2}
+%% \end{align}
+
+%% \begin{align}
+%% T_{1}=T_{2}=\frac{aT-v_{1}+v_{2}}{2a}
+%% \end{align}
+
+%% \begin{align}
+%% (v_{1}-v_{2})T_{1}
+%% +(v_{2}+v_{\mathrm{M}})T
+%% =2D
+%% \end{align}
+
+
+
 
 
 \end{document}

@@ -1,0 +1,234 @@
+﻿\documentclass[a4paper]{jsarticle}
+\usepackage[dvips]{graphicx}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{ascmac}
+\usepackage{algorithm,algpseudocode}
+\usepackage{svg}
+\usepackage{url}
+
+\flushbottom
+\sloppy
+
+\setlength{\paperwidth}{210mm}
+\setlength{\paperheight}{297mm}
+\setlength{\voffset}{0mm}
+\setlength{\hoffset}{0mm}
+\setlength{\textwidth}{\paperwidth}
+\addtolength{\textwidth}{-30mm}
+\setlength{\textheight}{\paperheight}
+\addtolength{\textheight}{-60mm}
+\setlength{\topmargin}{-1in}
+\addtolength{\topmargin}{20mm}
+\setlength{\headheight}{0mm}
+\setlength{\headsep}{0mm}
+\setlength{\footskip}{10mm}
+\setlength{\oddsidemargin}{-1in}
+\addtolength{\oddsidemargin}{15mm}
+\setlength{\columnsep}{7mm}
+
+\title{\bf 分解能可変octreeを作ったよ}
+\author{\Large{\bf 杉原 知道}}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-\baselineskip}
+
+\section{はじめに}
+
+octreeは通常，干渉判定の高速化や近傍点探索の高速化を目的として使われるものですが，筆者はどちらかというと無制限環境での地図の動的作成がやりたいので，空間分解能を積極的に上げたり落としたりできるようなデータ構造と処理を作ってみました．
+場所によって空間分割数が異なることを許容するので，いわゆるMorton数を使った領域探索の高速化はできなくなりますが，筆者の意図した用途では問題ないのでよしとします．
+
+本記事に載せているコードは全てZeoのzeo\_vec3d\_octree.cに実装しています．
+
+
+\section{Octreeのデータ構造}
+
+octreeの空間分割単位となるノードはoctantと呼ばれます．そのデータ構造\verb|zVec3DOctant|は，次のように定義しました．
+\begin{screen}
+\begin{verbatim}
+typedef struct{
+  zVec3DOctant *suboctant[8];
+  zAABox3D region;
+  zVec3DList points;
+} zVec3DOctant;
+\end{verbatim}
+\end{screen}
+このoctantの大本となるデータ構造が，octreeである\verb|zVec3DOctree|です．全体の根になるoctantを一つ持てば良いのですが，キーワードとなる{\bf 空間分解能}\verb|resolution|もメンバ変数に持たせることにしました．
+\begin{screen}
+\begin{verbatim}
+typedef struct{
+  double resolution;
+  zVec3DOctant root;
+} zVec3DOctree;
+\end{verbatim}
+\end{screen}
+
+
+\section{分解能可変にするためのoctant操作}
+
+領域内の点の有無に応じてsuboctantをピンポイントで作る処理が必要です．これを行う関数\verb|_zVec3DOctantAllocSuboctant()|と\verb|_zVec3DOctantAddPoint()|を示します．
+\begin{screen}
+\begin{verbatim}
+static zVec3DOctant *_zVec3DOctantAllocSuboctant(zVec3DOctant *octant, byte xb, byte yb, byte zb, zVec3D *mid)
+{
+  byte i;
+
+  i = zb << 2 | yb << 1 | xb;
+  if( !octant->suboctant[i] ){
+    if( !( octant->suboctant[i] = zAlloc( zVec3DOctant, 1 ) ) ){
+      ZALLOCERROR();
+      return NULL;
+    }
+    _zVec3DOctantInit( octant->suboctant[i] );
+    _zVec3DOctantSetRegion( octant->suboctant[i],
+      xb ? mid->c.x : zAABox3DXMin(&octant->region),
+      yb ? mid->c.y : zAABox3DYMin(&octant->region),
+      zb ? mid->c.z : zAABox3DZMin(&octant->region),
+      xb ? zAABox3DXMax(&octant->region) : mid->c.x,
+      yb ? zAABox3DYMax(&octant->region) : mid->c.y,
+      zb ? zAABox3DZMax(&octant->region) : mid->c.z );
+  }
+  return octant->suboctant[i];
+}
+
+static zVec3DOctant *_zVec3DOctantAddPoint(zVec3DOctant *octant, const zVec3D *point, double resolution)
+{
+  zVec3D mid;
+  byte xb, yb, zb;
+  zVec3DOctant *suboctant;
+
+  if( _zVec3DOctantIsSmallest( octant, resolution ) )
+    return zVec3DListAdd( &octant->points, point ) ? octant : NULL;
+  zAABox3DCenter( &octant->region, &mid );
+  xb = point->c.x > mid.c.x ? 1 : 0;
+  yb = point->c.y > mid.c.y ? 1 : 0;
+  zb = point->c.z > mid.c.z ? 1 : 0;
+  if( !( suboctant = _zVec3DOctantAllocSuboctant( octant, xb, yb, zb, &mid ) ) ) return NULL;
+  return _zVec3DOctantAddPoint( suboctant, point, resolution );
+}
+\end{verbatim}
+\end{screen}
+
+後者の\verb|_zVec3DOctantAddPoint()|が，与えられた点\verb|point|をoctreeに登録する関数です．既に最小サイズのoctantであれば，点をリストに追加します．そうでなければ，点が8象限のどこにあるかを判定し（領域内の各軸方向中点をとって，それとの大小を比較するだけです），小さい側にあれば0，大きい側にあれば1を\verb|_zVec3DOctantAllocSuboctant()|に渡して，当該suboctantを生成or取得した後に再帰的に登録処理を行います．
+生成すべきsuboctantのindexは，上記の0/1の値のビット操作によって計算できます（ここの考え方はMorton数に少しだけ似ています）．またそのsuboctantの領域も，それらのビットによって直ちに決まります．
+
+分解能を動的可変にするために，octantを分割/統合する処理が必要です．分割は次の関数で行います．
+\begin{screen}
+\begin{verbatim}
+static bool _zVec3DOctantDivide(zVec3DOctant *octant, double resolution)
+{
+  zVec3DListCell *cp;
+  zVec3D mid;
+  byte xb, yb, zb, i;
+  zVec3DOctant *suboctant;
+
+  if( !octant ) return true;
+  if( _zVec3DOctantIsSmallest( octant, resolution ) ) return true;
+  zAABox3DCenter( &octant->region, &mid );
+  while( !zListIsEmpty( &octant->points ) ){
+    zListDeleteHead( &octant->points, &cp );
+    xb = cp->data.c.x > mid.c.x ? 1 : 0;
+    yb = cp->data.c.y > mid.c.y ? 1 : 0;
+    zb = cp->data.c.z > mid.c.z ? 1 : 0;
+    if( !( suboctant = _zVec3DOctantAllocSuboctant( octant, xb, yb, zb, &mid ) ) ) return false;
+    zListInsertHead( &suboctant->points, cp );
+  }
+  for( i=0; i<8; i++ )
+    if( !_zVec3DOctantDivide( octant->suboctant[i], resolution ) ) return false;
+  return true;
+}
+\end{verbatim}
+\end{screen}
+
+リストに登録されている点を一つずつ参照しながら，その点が属する領域のsuboctantに移譲していきます．該当するsuboctantが無ければ新たに生成します．ここの仕組みは\verb|_zVec3DOctantAddPoint()|と同じですが，さらにsuboctantを再帰的に分割していく処理が加わっています．
+
+逆にoctantを統合する関数は，次のものです．
+\begin{screen}
+\begin{verbatim}
+static void _zVec3DOctantMerge(zVec3DOctant *octant, double resolution)
+{
+  int i;
+
+  if( !octant ) return;
+  for( i=0; i<8; i++ )
+    _zVec3DOctantMerge( octant->suboctant[i], resolution );
+  if( _zVec3DOctantIsSmallest( octant, resolution ) )
+    for( i=0; i<8; i++ )
+      if( octant->suboctant[i] ){
+        zListAppend( &octant->points, &octant->suboctant[i]->points );
+        _zVec3DOctantDestroy( octant->suboctant[i] );
+        zFree( octant->suboctant[i] );
+      }
+}
+\end{verbatim}
+\end{screen}
+
+先に再帰的にsuboctantをそれぞれ統合した後，もし今のoctantが指定の空間分解能よりも小さい大きさのものであれば，suboctantが持つ点リストをもらってまとめた上で，suboctantを全て破棄します．
+
+
+
+\section{octree操作}
+
+前節のoctant操作は全てstatic関数として定義しました．ユーザが用いるのは，\verb|zVec3DOctree|を操作する関数のみとなります．
+
+まず，次の関数でoctreeを初期化します．基本的に，カバーする全直方体領域と，空間分解能を指定しているだけです．
+\begin{screen}
+\begin{verbatim}
+zVec3DOctree *zVec3DOctreeInit(zVec3DOctree *octree, double xmin, double ymin, double zmin, double xmax, double ymax, double zmax, double resolution)
+{
+  _zVec3DOctantInit( &octree->root );
+  _zVec3DOctantSetRegion( &octree->root, xmin, ymin, zmin, xmax, ymax, zmax );
+  zVec3DOctreeSetResolution( octree, resolution );
+  return octree;
+}
+\end{verbatim}
+\end{screen}
+
+使い終わったら次の関数で破棄します．
+\begin{screen}
+\begin{verbatim}
+void zVec3DOctreeDestroy(zVec3DOctree *octree)
+{
+  _zVec3DOctantDestroy( &octree->root );
+}
+\end{verbatim}
+\end{screen}
+
+点の追加は，前述の\verb|_zVec3DOctantAddPoint()|をoctreeの\verb|root|に適用します．
+\begin{screen}
+\begin{verbatim}
+zVec3DOctant *zVec3DOctreeAddPoint(zVec3DOctree *octree, zVec3D *point)
+{
+  if( !_zVec3DOctantPointIsInside( &octree->root, point ) ){
+    ZRUNERROR( ZEO_ERR_OCTREE_POINT_OUTOFREGION );
+    return NULL;
+  }
+  return _zVec3DOctantAddPoint( &octree->root, point, octree->resolution );
+}
+\end{verbatim}
+\end{screen}
+
+
+また，分解能の変更は，今よりも小さくするならば\verb|_zVec3DOctantDivide()|を，大きくするならば\verb|_zVec3DOctantMerge()|を\verb|root|に適用すれば良いです．
+\begin{screen}
+\begin{verbatim}
+bool zVec3DOctreeChangeResolution(zVec3DOctree *octree, double resolution)
+{
+  if( resolution < octree->resolution ){
+    zVec3DOctreeSetResolution( octree, resolution );
+    return _zVec3DOctantDivide( &octree->root, octree->resolution );
+  }
+  zVec3DOctreeSetResolution( octree, resolution );
+  _zVec3DOctantMerge( &octree->root, octree->resolution );
+  return true;
+}
+\end{verbatim}
+\end{screen}
+
+上記の機能を実際に使って，点群の追加と分解能の変更を行ってみました．点群はstanford bunnyから取ったものです．
+
+
+
+
+\end{document}

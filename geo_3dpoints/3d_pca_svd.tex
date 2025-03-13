@@ -1,0 +1,664 @@
+﻿\documentclass[a4paper]{jsarticle}
+\usepackage[dvips]{graphicx}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{ascmac}
+\usepackage{algorithm,algpseudocode}
+\usepackage{svg}
+\usepackage{url}
+
+\flushbottom
+\sloppy
+
+\setlength{\paperwidth}{210mm}
+\setlength{\paperheight}{297mm}
+\setlength{\voffset}{0mm}
+\setlength{\hoffset}{0mm}
+\setlength{\textwidth}{\paperwidth}
+\addtolength{\textwidth}{-30mm}
+\setlength{\textheight}{\paperheight}
+\addtolength{\textheight}{-60mm}
+\setlength{\topmargin}{-1in}
+\addtolength{\topmargin}{20mm}
+\setlength{\headheight}{0mm}
+\setlength{\headsep}{0mm}
+\setlength{\footskip}{10mm}
+\setlength{\oddsidemargin}{-1in}
+\addtolength{\oddsidemargin}{15mm}
+\setlength{\columnsep}{7mm}
+
+\title{\bf 3×3実対称行列の固有値・固有ベクトル計算と点群処理への応用}
+\author{\Large{\bf 杉原 知道}}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-\baselineskip}
+
+\section{はじめに}
+
+観測によって得られた3次元点群から，元の形状とその姿勢を推定するための基本計算として，本記事では
+\begin{itemize}
+\item 点群分布の分散が最大となる方向の推定
+\item 二つの点群からの座標変換の逆推定
+\end{itemize}
+を採り上げます．どちらも鍵となるのは，3×3実対象行列の{\bf 固有値}（eigenvalue）・{\bf 固有ベクトル}（eigenvector）の計算です．
+
+一般的な正方行列の固有値・固有ベクトル計算には，様々な技巧が求められるのですが，3×3実対称行列に限って言えば，{\bf Jacobi法}が最も単純でかつ十分実用的な方法となります．点群処理に限らず，たとえば慣性テンソルの主軸方向計算や弾性物体に作用する主応力の計算など，3次元に関係する様々な量の解析に広く応用できるので，役に立つこともあろうかと思います．
+
+雑多な感じの記事になってしまっていますが，そこはご勘弁下さい．
+
+
+
+\section{Jacobi法による3×3実対称行列の固有値・固有ベクトル計算}
+
+Jacobi法は，{\bf 相似変換の反復により実対称行列を対角化する方法}です．
+
+ある3×3実対称行列$\boldsymbol{M}$の固有値$\lambda_{i}$と，それに対する固有ベクトル$\boldsymbol{\xi}_{i}$（$i=1,2,3$）について，$\boldsymbol{\Xi}=[\boldsymbol{\xi}_{1}~\boldsymbol{\xi}_{2}~\boldsymbol{\xi}_{3}]$，$\boldsymbol{\Lambda}=\mathrm{diag}\left\{\lambda_{1},\lambda_{2},\lambda_{3}\right\}$とそれぞれおくと，定義より次が成り立ちます．
+\begin{align*}
+\boldsymbol{M}\boldsymbol{\xi}_{i}=\lambda_{i}\boldsymbol{\xi}_{i}
+\quad\mbox{(for $\forall i=1,2,3$)}
+\qquad\Leftrightarrow\qquad
+\boldsymbol{M}\boldsymbol{\Xi}=\boldsymbol{\Xi}\boldsymbol{\Lambda}
+\end{align*}
+固有ベクトルはノルムが不定ですが，全て1となるように決めることにしましょう．
+\begin{align*}
+\|\boldsymbol{\xi}_{i}\|=1\quad\mbox{(for $\forall i=1,2,3$)}
+\end{align*}
+$\boldsymbol{M}$は対称行列ですので，相異なる固有ベクトルは互いに直交します．
+
+【証明】
+相異なる$i\in\left\{1,2,3\right\}$，$j\in\left\{1,2,3\right\}$（$i\neq j$）について，
+\begin{align*}
+\boldsymbol{M}\boldsymbol{\xi}_{i}=\lambda_{i}\boldsymbol{\xi}_{i}
+\qquad\Rightarrow\qquad
+\boldsymbol{\xi}_{j}^{\mathrm{T}}\boldsymbol{M}\boldsymbol{\xi}_{i}=\lambda_{i}\boldsymbol{\xi}_{j}^{\mathrm{T}}\boldsymbol{\xi}_{i}
+\end{align*}
+同様に
+\begin{align*}
+\boldsymbol{M}\boldsymbol{\xi}_{j}=\lambda_{j}\boldsymbol{\xi}_{j}
+\qquad\Rightarrow\qquad
+\boldsymbol{\xi}_{i}^{\mathrm{T}}\boldsymbol{M}\boldsymbol{\xi}_{j}=\lambda_{j}\boldsymbol{\xi}_{i}^{\mathrm{T}}\boldsymbol{\xi}_{j}
+\end{align*}
+である．さらに，$\boldsymbol{M}^{\mathrm{T}}=\boldsymbol{M}$より
+\begin{align*}
+\boldsymbol{\xi}_{j}^{\mathrm{T}}\boldsymbol{M}\boldsymbol{\xi}_{i}
+=
+(\boldsymbol{\xi}_{j}^{\mathrm{T}}\boldsymbol{M}\boldsymbol{\xi}_{i})^{\mathrm{T}}
+=
+\boldsymbol{\xi}_{i}^{\mathrm{T}}\boldsymbol{M}^{\mathrm{T}}\boldsymbol{\xi}_{j}
+=
+\boldsymbol{\xi}_{i}^{\mathrm{T}}\boldsymbol{M}\boldsymbol{\xi}_{j}
+\end{align*}
+であるから，結局
+\begin{align*}
+\lambda_{i}\boldsymbol{\xi}_{j}^{\mathrm{T}}\boldsymbol{\xi}_{i}\equiv\lambda_{j}\boldsymbol{\xi}_{i}^{\mathrm{T}}\boldsymbol{\xi}_{j}
+\qquad\Leftrightarrow\qquad
+(\lambda_{i}-\lambda_{j})\boldsymbol{\xi}_{i}^{\mathrm{T}}\boldsymbol{\xi}_{j}\equiv 0
+\end{align*}
+が恒等的に成り立つ．$i\neq j$ならば一般的には$\lambda_{i}\neq\lambda_{j}$なので，このための必要十分条件は
+\begin{align*}
+\boldsymbol{\xi}_{j}^{\mathrm{T}}\boldsymbol{\xi}_{i}=0
+\end{align*}
+である．すなわち$\boldsymbol{\xi}_{j}$と$\boldsymbol{\xi}_{i}$は直交する．（証明終）
+
+よって，$\boldsymbol{\Xi}$は正規直交行列となります．
+\begin{align*}
+\boldsymbol{\Xi}^{\mathrm{T}}\boldsymbol{\Xi}=\boldsymbol{1}
+\end{align*}
+ただし，$\boldsymbol{1}$は単位行列です．
+
+以上より，次が成り立ちます．
+\begin{align*}
+\boldsymbol{\Xi}^{\mathrm{T}}\boldsymbol{M}\boldsymbol{\Xi}=\boldsymbol{\Lambda}
+\end{align*}
+すなわち，「$\boldsymbol{M}$にある正規直交行列を右から，その転置行列を左からそれぞれ掛けることで対角化できる」ことが分かります．Jacobi法はこの事実を元に作られたアルゴリズムであり，正規直交行列として{\bf 回転行列}を用いるものです．
+
+まず，
+\begin{align*}
+\boldsymbol{M}=\begin{bmatrix}
+m_{11} & m_{12} & m_{13} \\
+m_{12} & m_{22} & m_{23} \\
+m_{13} & m_{23} & m_{33}
+\end{bmatrix}
+\end{align*}
+とおき，$m_{12}\neq 0$であるとして，回転行列
+\begin{align*}
+\boldsymbol{R}_{12}=\begin{bmatrix}
+\cos\theta &-\sin\theta & 0 \\
+\sin\theta & \cos\theta & 0 \\
+ 0 & 0 & 1
+\end{bmatrix}
+\end{align*}
+を右から，その転置行列を左からそれぞれ掛けることで，2行目1列目成分（$=$1行目2列目成分）を0にすることを考えます．
+\begin{align*}
+\boldsymbol{R}_{12}^{\mathrm{T}}\boldsymbol{M}\boldsymbol{R}_{12}&=
+\begin{bmatrix}
+m_{11}^{\prime} & m_{12}^{\prime} & m_{13}^{\prime} \\
+m_{12}^{\prime} & m_{22}^{\prime} & m_{23}^{\prime} \\
+m_{13}^{\prime} & m_{23}^{\prime} & m_{33}^{\prime}
+\end{bmatrix}
+\\
+&=\begin{bmatrix}
+ \cos\theta & \sin\theta & 0 \\
+-\sin\theta & \cos\theta & 0 \\
+ 0 & 0 & 1
+\end{bmatrix}
+\begin{bmatrix}
+m_{11} & m_{12} & m_{13} \\
+m_{12} & m_{22} & m_{23} \\
+m_{13} & m_{23} & m_{33}
+\end{bmatrix}
+\begin{bmatrix}
+\cos\theta &-\sin\theta & 0 \\
+\sin\theta & \cos\theta & 0 \\
+ 0 & 0 & 1
+\end{bmatrix}
+\\
+&=\begin{bmatrix}
+m_{11}\cos^{2}\theta+2m_{12}\sin\theta\cos\theta+m_{22}\sin^{2}\theta &
+m_{12}(\cos^{2}\theta-\sin^{2}\theta)+(m_{22}-m_{11})\sin\theta\cos\theta &
+m_{13}\cos\theta+m_{23}\sin\theta \\
+m_{12}(\cos^{2}\theta-\sin^{2}\theta)+(m_{22}-m_{11})\sin\theta\cos\theta &
+m_{11}\sin^{2}\theta-2m_{12}\sin\theta\cos\theta+m_{22}\cos^{2}\theta &
+-m_{13}\sin\theta+m_{23}\cos\theta \\
+m_{13}\cos\theta+m_{23}\sin\theta &-m_{13}\sin\theta+m_{23}\cos\theta & m_{33}
+\end{bmatrix}
+\end{align*}
+ですから，2行目1列目成分が0になるならば，
+\begin{align*}
+m_{12}(\cos^{2}\theta-\sin^{2}\theta)+(m_{22}-m_{11})\sin\theta\cos\theta=0
+\end{align*}
+が成り立ちます．これを満たす$\sin\theta$，$\cos\theta$を見つければ良いわけです．
+
+もし$\cos\theta=0$ならば$m_{12}=0$となり，$m_{12}\neq 0$と矛盾しますので，$\cos\theta\neq 0$です．よって，上式の両辺を$m_{12}\cos^{2}\theta$で割れば
+\begin{align*}
+t^{2}-2\alpha t-1=0
+\end{align*}
+を得ます．ただし，
+\begin{align*}
+\alpha=\frac{m_{22}-m_{11}}{2m_{12}},\qquad
+t=\tan\theta
+\end{align*}
+とそれぞれおきました．この方程式の解，すなわち$t$の候補は2つあります．どちらを選んでも構わないのですが，桁落ちを避けるために
+\begin{align*}
+t=\begin{cases}
+\alpha+\sqrt{\alpha^{2}+1} & \mbox{($\alpha\geq 0$のとき)} \\
+\alpha-\sqrt{\alpha^{2}+1} & \mbox{($\alpha<0$のとき)}
+\end{cases}
+\end{align*}
+としましょう．三角関数の計算はコストが高いので，$\theta$は求めず，次のように$c=\cos\theta$と$s=\sin\theta$を計算します．
+\begin{align*}
+c&=\frac{1}{\sqrt{t^{2}+1}} \\
+s&=tc
+\end{align*}
+これらを用いれば，変換後の行列は次のようになります．
+\begin{align*}
+\begin{bmatrix}
+\frac{\displaystyle m_{11}+2m_{12}t+m_{22}t^{2}}{\displaystyle t^{2}+1} &
+0 &
+(m_{13}+m_{23}t)c \\
+0 &
+\frac{\displaystyle m_{11}t^{2}-2m_{12}t+m_{22}}{\displaystyle t^{2}+1} &
+(-m_{13}t+m_{23})c \\
+(m_{13}+m_{23}t)c &(-m_{13}t+m_{23})c & m_{33}
+\end{bmatrix}
+\end{align*}
+ここで
+\begin{align*}
+t^{2}-2\alpha t-1=0
+\quad\Leftrightarrow\quad
+m_{22}-m_{11}=\frac{t^{2}-1}{t}m_{12}
+\end{align*}
+を用いれば，第一対角成分および第二対角成分はそれぞれ
+\begin{align*}
+m_{11}^{\prime}&=\frac{m_{11}+2m_{12}t+m_{22}t^{2}}{t^{2}+1}=m_{11}+tm_{12} \\
+m_{22}^{\prime}&=\frac{m_{11}t^{2}-2m_{12}t+m_{22}}{t^{2}+1}=m_{22}-tm_{12}
+\end{align*}
+となり，さらに簡単に計算できることが分かります．
+
+この変換によって，行列の非対角成分の2乗和は，
+\begin{align*}
+m_{12}^{\prime 2}+m_{13}^{\prime 2}+m_{22}^{\prime 2}=m_{13}^{2}+m_{23}^{2}
+\end{align*}
+となります．つまり，$m_{12}$が$m_{12}^{\prime}=0$となった分がそのまま減少したということです．同様に，
+\begin{align*}
+\boldsymbol{R}_{13}=\begin{bmatrix}
+ \cos\theta & 0 & \sin\theta \\
+ 0 & 1 & 0 \\
+-\sin\theta & 0 & \cos\theta
+\end{bmatrix}
+\end{align*}
+を用いて3行目1列目成分を0に，
+\begin{align*}
+\boldsymbol{R}_{23}=\begin{bmatrix}
+1 & 0 & 0 \\
+0 & \cos\theta &-\sin\theta \\
+0 & \sin\theta & \cos\theta
+\end{bmatrix}
+\end{align*}
+を用いて3行目2列目成分を0に出来ます．これらの計算によって，一度零となった成分が再び非零の値になってしまうことはありますが，上記の事実によって非対角成分の2乗和は必ず減少するので，反復すれば対角行列に収束することが保証されます．もちろんそれは$\boldsymbol{\Lambda}$に一致し，したがって変換に使った$\boldsymbol{R}_{12}\boldsymbol{R}_{13}\boldsymbol{R}_{23}\cdots$は$\boldsymbol{\Xi}$に一致します．
+
+変換の順番は固定しても良いですが，毎回三つの非対角成分のうち絶対値が最大のものを0にするように反復すれば，効率良く対角行列に収束させられます．1回の変換によって三つのうち一つが必ず0になるので，残り二つを比較するだけで絶対値が最大の成分は分かることに注意して下さい．
+
+Zeoでの実装は次のようになっています．
+\begin{screen}
+\begin{verbatim}
+static void _zMat3DSymEigRot(zMat3D *m, zMat3D *r, int i, int j)
+{
+  int k;
+  double v, t, ti, c, s;
+  double tmp1, tmp2;
+
+  if( zIsTiny( m->e[j][i] ) ) return;
+  v = 0.5 * ( m->e[j][j] - m->e[i][i] ) / m->e[j][i];
+  ti = sqrt( v * v + 1 );
+  t = -v + ( v < 0 ? ti : -ti );
+  s = t * ( c = 1 / sqrt( t*t + 1 ) );
+  tmp1 = t * m->e[j][i];
+  m->e[j][i] = m->e[i][j] = 0;
+  m->e[i][i] -= tmp1;
+  m->e[j][j] += tmp1;
+  for( k=0; k<3; k++ ){
+    /* update of transformation matrix */
+    tmp1 = r->e[i][k];
+    tmp2 = r->e[j][k];
+    r->e[i][k] = c * tmp1 - s * tmp2;
+    r->e[j][k] = s * tmp1 + c * tmp2;
+    /* update of symmetric matrix */
+    if( k == i || k == j ) continue;
+    tmp1 = m->e[k][i];
+    tmp2 = m->e[k][j];
+    m->e[k][i] = m->e[i][k] = c * tmp1 - s * tmp2;
+    m->e[k][j] = m->e[j][k] = s * tmp1 + c * tmp2;
+  }
+}
+
+bool zMat3DSymEig(const zMat3D *m, zVec3D *eigval, zMat3D *eigbase)
+{
+  int iter;
+  int i, j, i1, j1, i2, j2;
+  zMat3D l;
+  bool ret = true;
+
+  zMat3DCopy( m, &l );
+  zMat3DIdent( eigbase );
+  /* iterative elimination of non-diagonal components */
+  i = 0; j = 1;
+  for( iter=0; i<Z_MAX_ITER_NUM; iter++ ){
+    _zMat3DSymEigRot( &l, eigbase, i, j );
+    i1 = ( i + 1 ) % 3; j1 = ( j + 1 ) % 3;
+    i2 = ( i + 2 ) % 3; j2 = ( j + 2 ) % 3;
+    if( fabs( l.e[j1][i1] ) > fabs( l.e[j2][i2] ) ){
+      i = i1; j = j1;
+    } else{
+      i = i2; j = j2;
+    }
+    if( zIsTiny( l.e[j][i] ) ) goto TERMINATE;
+  }
+  ZITERWARN( Z_MAX_ITER_NUM );
+  ret = false;
+
+ TERMINATE:
+  for( i=0; i<3; i++ )
+    eigval->e[i] = l.e[i][i];
+  return ret;
+}
+\end{verbatim}
+\end{screen}
+
+
+\section{点群分布の分散が最大となる方向の推定}
+
+分布した点群の分散が最大となる方向を求める計算は，{\bf 主成分分析}（principal component analysis, PCA）と呼ばれます．たとえば，点群で近似された形状の慣性主軸推定や，点群への平面フィッティングなどに用いられます．これは実対象行列の固有値・固有ベクトル計算の直接的応用であり，3次元の場合は前節で示した方法が使えます．
+
+点群$\mathcal{P}=\left\{\boldsymbol{p}_{i}\right\}$（$i=1,\cdots,N$）が与えられているとします．これらを，「ある点を通る直線上に射影したときに，その分散が極大となる」ような直線の方向ベクトル$\boldsymbol{u}$を求めるのがここでの目的です．
+\begin{align*}
+\boldsymbol{u}=\mathop{\mathrm{arg~min}}_{\boldsymbol{u}}\left\{
+\left.
+-\sum_{i=1}^{N}|\boldsymbol{u}^{\mathrm{T}}(\boldsymbol{p}_{i}-\bar{\boldsymbol{p}})|^{2}
+\right|
+\|\boldsymbol{u}\|=1
+\right\}
+\end{align*}
+ただし，$\bar{\boldsymbol{p}}$は直線が通る点の位置ベクトルです．方向ベクトルはノルムが不定なので，1になるように決めることにしました．等式制約条件付き最大化問題なので，次のLagrangianを定義します．
+\begin{align*}
+L
+&=-\sum_{i=1}^{N}|\boldsymbol{u}^{\mathrm{T}}(\boldsymbol{p}_{i}-\bar{\boldsymbol{p}})|^{2}-\lambda(\|\boldsymbol{u}\|^{2}-1)
+\\
+&=-\boldsymbol{u}^{\mathrm{T}}\sum_{i=1}^{N}(\boldsymbol{p}_{i}-\bar{\boldsymbol{p}})(\boldsymbol{p}_{i}-\bar{\boldsymbol{p}})^{\mathrm{T}}\boldsymbol{u}
+-\lambda(\boldsymbol{u}^{\mathrm{T}}\boldsymbol{u}-1)
+\end{align*}
+最適解$\boldsymbol{u}$が満たすべき条件は，次の2式です．
+\begin{align*}
+\left(\frac{\partial L}{\partial\boldsymbol{u}}\right)^{\mathrm{T}}&=
+2\left\{\sum_{i=1}^{N}(\boldsymbol{p}_{i}-\bar{\boldsymbol{p}})(\boldsymbol{p}_{i}-\bar{\boldsymbol{p}})^{\mathrm{T}}\boldsymbol{u}-\lambda\boldsymbol{u}\right\}
+=\boldsymbol{0}
+\\
+\frac{\partial L}{\partial\lambda}&=
+\boldsymbol{u}^{\mathrm{T}}\boldsymbol{u}-1=0
+\end{align*}
+上の式は，
+\begin{align*}
+\boldsymbol{V}=-\sum_{i=1}^{N}(\boldsymbol{p}_{i}-\bar{\boldsymbol{p}})(\boldsymbol{p}_{i}-\bar{\boldsymbol{p}})^{\mathrm{T}}
+\end{align*}
+とおいたときに，$\lambda$が$\boldsymbol{V}$の固有値，$\boldsymbol{u}$がそれに対する固有ベクトルであることを意味しています．
+
+分散を{\bf 最大}とする方向を求めたいので，最小化問題に変形するために頭に$-$をつけましたが，実は，「ある点を通る直線上に射影したときに，その分散が{\bf 最小}となる」ような直線の方向ベクトル$\boldsymbol{u}$も上記と全く同じ条件を満たします．固有ベクトルは3本存在しますから，正しくは，「ある点を通る直線上に射影したときに，その分散が{\bf 極大・極小}となる」ような直線の方向ベクトル$\boldsymbol{u}$が満たすのが上記の条件，と理解すべきです．3本の固有ベクトルは互いに直交することにも注意して下さい．この意味で，$\boldsymbol{V}$の頭の$-$は本質的でありませんので，これを外して次のように改めて行列$\boldsymbol{V}$を定義しましょう．
+\begin{align*}
+\boldsymbol{V}=\sum_{i=1}^{N}(\boldsymbol{p}_{i}-\bar{\boldsymbol{p}})(\boldsymbol{p}_{i}-\bar{\boldsymbol{p}})^{\mathrm{T}}
+\end{align*}
+$\boldsymbol{V}$は，{\bf 分散共分散行列}（variance-covariace matrix）と呼ばれます．
+
+$\bar{\boldsymbol{p}}$は任意に与えることもできますが，多くの場合，次式で定義される点群$\mathcal{P}$の重心が選ばれます．
+\begin{align*}
+\bar{\boldsymbol{p}}=\frac{1}{N}\sum_{i=1}^{N}\boldsymbol{p}_{i}
+\end{align*}
+定義通りに，まず$\bar{\boldsymbol{p}}$を求めてから，それを使って$\boldsymbol{V}$を求めることもできますが，
+\begin{align*}
+\boldsymbol{V}
+=\sum_{i=1}^{N}\left(\boldsymbol{p}_{i}\boldsymbol{p}_{i}^{\mathrm{T}}-2\boldsymbol{p}_{i}\bar{\boldsymbol{p}}^{\mathrm{T}}+\bar{\boldsymbol{p}}\bar{\boldsymbol{p}}^{\mathrm{T}}\right)
+=\sum_{i=1}^{N}\boldsymbol{p}_{i}\boldsymbol{p}_{i}^{\mathrm{T}}-N\bar{\boldsymbol{p}}\bar{\boldsymbol{p}}^{\mathrm{T}}
+\end{align*}
+であることに注意すれば，1回のループで効率良く計算することができます．
+
+Zeoでの実装は次のようになっています．
+\begin{screen}
+\begin{verbatim}
+bool zVec3DDataPCA(zVec3DData *data, const zVec3D *center, double pc[3], zVec3D pa[3])
+{
+  zMat3D vm;
+  zVec3D *v, p;
+  double _pc[3];
+  zVec3D _pa[3];
+
+  if( zVec3DDataIsEmpty( data ) ){
+    ZRUNERROR( ZEO_ERR_EMPTYSET );
+    return false;
+  }
+  if( !pc ) pc = _pc;
+  if( !pa ) pa = _pa;
+  zMat3DZero( &vm );
+  zVec3DDataRewind( data );
+  while( ( v = zVec3DDataFetch( data ) ) ){
+    zVec3DSub( v, center, &p );
+    zMat3DAddDyad( &vm, &p, &p );
+  }
+  zMat3DSymEig( &vm, (zVec3D *)pc, (zMat3D *)pa );
+  return true;
+}
+
+bool zVec3DDataBaryPCA(zVec3DData *data, zVec3D *center, double pc[3], zVec3D pa[3])
+{
+  zMat3D vm;
+  zVec3D p, *v;
+  double _pc[3];
+  zVec3D _pa[3];
+
+  if( zVec3DDataIsEmpty( data ) ){
+    ZRUNERROR( ZEO_ERR_EMPTYSET );
+    return false;
+  }
+  if( !pc ) pc = _pc;
+  if( !pa ) pa = _pa;
+  zMat3DZero( &vm );
+  zVec3DZero( &p );
+  zVec3DDataRewind( data );
+  while( ( v = zVec3DDataFetch( data ) ) ){
+    zVec3DAddDRC( &p, v );
+    zMat3DAddDyad( &vm, v, v );
+  }
+  zVec3DDiv( &p, zVec3DDataSize(data), center );
+  zMat3DSubDyad( &vm, &p, center );
+  zMat3DSymEig( &vm, (zVec3D *)pc, (zMat3D *)pa );
+  return true;
+}
+\end{verbatim}
+\end{screen}
+
+\verb|zVec3DDataPCA()|が，主成分分析するときの中心点$\bar{\boldsymbol{p}}$を\verb|center|として与える関数，\verb|zVec3DDataBaryPCA()|が，点群の重心$\bar{\boldsymbol{p}}$も同時に推定し\verb|center|に収める関数です．
+
+\verb|data|が点群（入力データ）であり，3個の主成分（分散共分散行列の固有値）が\verb|pc[]|に，主成分を与える3個の単位方向ベクトル（主軸方向ベクトル）が\verb|pa[]|にそれぞれ入ります（順番は対応します）．
+
+この計算の負荷は実際のところどれくらいなのか調べるために，点$(1,0.5,1.5)$を中心とし，乱数的に回転させた奥行き2，幅1，高さ3の直方体の内部で，さらに乱数的に1000個生成した点群$\left\{\boldsymbol{p}_{i}\right\}$（$i=1,\cdots,1000$）を\verb|zVec3DDataBaryPCA()|で主成分分析するテストを，100回行いました．点の数は対角化計算の負荷に無関係なので，1000というのは適当です（実際これを100や10000に変えても，計算時間に影響はないはずです）．
+条件としては，直方体でなく球の内部に点群を一様分布させる方が計算コストが高くなるとは思いますが，それだと答えが正しいかどうか判断しづらいので避けました．
+
+反復回数は6〜10回でした．対称性を考えれば非対角成分は3個なので，1個の成分につき2〜3回の反復で収束していることになります．予想以上に速かった，というのが筆者の感想です．計算時間は，筆者の条件（CPU Intel Core-i7 1355U，RAM 32GB，OS Ubuntu 22.04LTS on WSL2）では8〜30μ秒でした．
+
+ある例で，得られた3個の主成分それぞれに直交する平面に点群を射影した図を示します．
+
+\begin{figure*}[h]
+\centering
+\includesvg[width=.4\textwidth]{fig/3dpoints_pca.svg}
+\end{figure*}
+
+3つの平面の交点が，おおよそ直方体の中心に一致していることにも注意して下さい．
+
+\verb|zVec3DDataBaryPCA()|を用いた点群の法線ベクトル推定を，別記事にまとめてあります．
+
+
+\section{二つの点群からの座標変換の逆推定}
+
+点群$\mathcal{P}=\left\{\boldsymbol{p}_{i}\right\}$（$i=1,\cdots,N$）と，これらに全て同一の座標変換を施した別の点群$\mathcal{P}^{\prime}=\left\{\boldsymbol{p}_{i}^{\prime}|\boldsymbol{p}_{i}^{\prime}=\boldsymbol{p}+\boldsymbol{R}\boldsymbol{p}_{i}\right\}$（$i=1,\cdots,N$）が与えられているとします．それぞれの点間の対応$\boldsymbol{p}_{i}$-$\boldsymbol{p}_{i}^{\prime}$は分かっているものとして，これらから$\boldsymbol{p}$および$\boldsymbol{R}$を同定したい，というのがここでの目的です．
+
+方法としては，次の文献のものがよく知られています．
+\begin{quote}
+S. Umeyama, Least-Squares Estimation of Transformation Parameters Between Two Point Patterns, IEEE Transactions on Pattern Analysis and Machine Intelligence, Vol. 13, No. 4, pp. 376--381, 1991.
+\end{quote}
+元文献では，任意次元の点群を扱えるように一般的な書き方がなされていますが，3次元点群に絞って要点を書くと，$\boldsymbol{p}$，$\boldsymbol{R}$は次式で得られます．
+\begin{align*}
+\boldsymbol{R}=\boldsymbol{V}\boldsymbol{U}^{\mathrm{T}}
+\\
+\boldsymbol{p}=\bar{\boldsymbol{p}}^{\prime}-\frac{\sigma_{1}+\sigma_{2}+\sigma_{3}}{s}\boldsymbol{R}\bar{\boldsymbol{p}}
+\end{align*}
+ただし，
+\begin{align*}
+\bar{\boldsymbol{p}}=\frac{1}{N}\sum_{i=1}^{N}\boldsymbol{p}_{i}
+\\
+\bar{\boldsymbol{p}}^{\prime}=\frac{1}{N}\sum_{i=1}^{N}\boldsymbol{p}_{i}^{\prime}
+\\
+s=\frac{1}{N}\sum_{i=1}^{N}\|\boldsymbol{p}_{i}-\bar{\boldsymbol{p}}\|^{2}
+\end{align*}
+であり，また$\boldsymbol{U}$，$\boldsymbol{V}$，$\sigma_{i}$（$i=1,2,3$）は，次の行列
+\begin{align*}
+\boldsymbol{\varPhi}=\frac{1}{N}\sum_{i=1}^{N}(\boldsymbol{p}_{i}-\bar{\boldsymbol{p}})(\boldsymbol{p}_{i}^{\prime}-\bar{\boldsymbol{p}}^{\prime})^{\mathrm{T}}
+\end{align*}
+を{\bf 特異値分解}（Singular Value Decomposition, SVD）して得られる正規直交行列および特異値です．
+\begin{align*}
+\boldsymbol{\varPhi}=\boldsymbol{U}\boldsymbol{\Sigma}\boldsymbol{V}^{\mathrm{T}}
+\\
+\boldsymbol{\Sigma}=\mathrm{diag}\{\sigma_{1},\sigma_{2},\sigma_{3}\}
+\end{align*}
+$\mathcal{P}$と$\mathcal{P}^{\prime}$の分散が完全に一致していれば$\sigma_{1}+\sigma_{2}+\sigma_{3}=s$となるので，理論上は
+\begin{align*}
+\boldsymbol{p}=\bar{\boldsymbol{p}}^{\prime}-\boldsymbol{R}\bar{\boldsymbol{p}}
+\end{align*}
+でも良いのですが，数値誤差を考慮して念のため入れています．
+
+証明は少々長くなるので，元文献を参照して頂くとして，Zeoでの実装は次のようになっています．
+\begin{screen}
+\begin{verbatim}
+zFrame3D *zVec3DDataIdentFrame(zVec3DData *src, zVec3DData *dest, zFrame3D *frame)
+{
+  zVec3D *po, *p;
+  zVec3D pgo, pg, dpo, dp, d;
+  zMat3D cov, u, v;
+  double so = 0;
+
+  if( zVec3DDataSize(src) != zVec3DDataSize(dest) ){
+    ZRUNERROR( ZEO_ERR_VEC3DDATA_SIZEMISMATCH, zVec3DDataSize(src), zVec3DDataSize(dest) );
+    return NULL;
+  }
+  if( zVec3DDataSize(src)  < ZEO_VEC3DDATA_IDENT_FRAME_MINSIZ ){
+    ZRUNERROR( ZEO_ERR_VEC3DDATA_IDENTFRAME_TOOFEWPOINTS, zVec3DDataSize(src) );
+    return NULL;
+  }
+  zVec3DDataBarycenter( src, &pgo );
+  zVec3DDataBarycenter( dest, &pg );
+  zVec3DDataRewind( src );
+  zVec3DDataRewind( dest );
+  zMat3DZero( &cov );
+  while( ( po = zVec3DDataFetch( src ) ) && ( p = zVec3DDataFetch( dest ) ) ){
+    zVec3DSub( po, &pgo, &dpo );
+    zVec3DSub( p, &pg, &dp );
+    so += zVec3DSqrNorm( &dpo );
+    zMat3DAddDyad( &cov, &dpo, &dp );
+  }
+  so /= zVec3DDataSize(src);
+  zMat3DDivDRC( &cov, zVec3DDataSize(src) );
+  zMat3DSVD( &cov, &u, &d, &v );
+  zMulMat3DMat3DT( &v, &u, zFrame3DAtt(frame) );
+  zMulMat3DVec3D( zFrame3DAtt(frame), &pgo, &dp );
+  zVec3DMulDRC( &dp, ( d.c.x + d.c.y + d.c.z ) / so );
+  zVec3DSub( &pg, &dp, zFrame3DPos(frame) );
+  return frame;
+}
+\end{verbatim}
+\end{screen}
+
+\verb|zMat3DSVD()|は，3×3実行列を特異値分解する関数です．次に説明するように，これにも3×3実対象行列の固有値・固有ベクトル計算が応用できます．
+
+念のため，特異値分解とは，任意の行列$\boldsymbol{A}$を次のように分解する計算でした．
+\begin{align*}
+\boldsymbol{A}=\boldsymbol{U}\boldsymbol{\Sigma}\boldsymbol{V}^{\mathrm{T}}
+\end{align*}
+ただし，$\boldsymbol{U}$および$\boldsymbol{V}$はユニタリ行列，$\boldsymbol{\Sigma}$は対角行列です．それぞれの行列のサイズの決め方には二つ流儀がありますが，$\boldsymbol{A}$が3×3実行列であるならば，$\boldsymbol{U}$および$\boldsymbol{V}$は3×3正規直交行列と考えて構いません．
+$\boldsymbol{\Sigma}^{T}=\boldsymbol{\Sigma}$であることに注意すれば，
+\begin{align*}
+\boldsymbol{A}\boldsymbol{A}^{\mathrm{T}}
+=\boldsymbol{U}\boldsymbol{\Sigma}\boldsymbol{V}^{\mathrm{T}}\boldsymbol{V}\boldsymbol{\Sigma}^{\mathrm{T}}\boldsymbol{U}^{\mathrm{T}}
+=\boldsymbol{U}\boldsymbol{\Sigma}^{2}\boldsymbol{U}^{\mathrm{T}}
+\qquad\Leftrightarrow\qquad
+\boldsymbol{U}^{\mathrm{T}}\boldsymbol{A}\boldsymbol{A}^{\mathrm{T}}\boldsymbol{U}=\boldsymbol{\Sigma}^{2}
+\end{align*}
+となるので，$\boldsymbol{A}\boldsymbol{A}^{\mathrm{T}}$の固有ベクトルを$\lambda_{i}$，それに対応する固有ベクトルを$\boldsymbol{u}_{i}$（$i=1,2,3$）とそれぞれおけば，$\boldsymbol{U}=[\boldsymbol{u}_{1}~\boldsymbol{u}_{2}~\boldsymbol{u}_{3}]$，$\boldsymbol{\Sigma}=\mathrm{diag}\left\{\sqrt{\lambda_{1}},\sqrt{\lambda_{2}},\sqrt{\lambda_{3}}\right\}$であることが分かります．したがって，Jacobi法で求めることができるわけです．
+$\boldsymbol{A}\boldsymbol{A}^{\mathrm{T}}$は非負定行列なので，その固有値$\lambda_{i}$（$\forall i=1,2,3$）は必ず非負となることに注意しましょう．
+
+$\boldsymbol{U}$と$\boldsymbol{\Sigma}$が得られれば，
+\begin{align*}
+\boldsymbol{V}=\boldsymbol{A}^{\mathrm{T}}\boldsymbol{U}\boldsymbol{\Sigma}~{-1}
+\end{align*}
+と求まります．$\boldsymbol{\Sigma}$の逆行列は
+\begin{align*}
+\boldsymbol{\Sigma}^{-1}=\mathrm{diag}\left\{\frac{1}{\sqrt{\lambda_{i}}}\right\}
+\end{align*}
+と容易に求まることにも注意しましょう．行列の積の計算量は，Jacobi法の反復計算に比べれば大したことありません．
+
+Zeoでの実装は次のようになっています．
+\begin{screen}
+\begin{verbatim}
+int zMat3DSVD(const zMat3D *m, zMat3D *u, zVec3D *sv, zMat3D *v)
+{
+  zMat3D m2;
+  int i, rank;
+
+  zMulMat3DMat3DT( m, m, &m2 );
+  zMat3DSymEig( &m2, sv, u );
+  zMulMat3DTMat3D( m, u, v );
+  for( rank=0, i=0; i<3; i++ ){
+    if( zIsTiny( sv->e[i] ) )
+      sv->e[i] = 0;
+    else{
+      zVec3DDivDRC( zMat3DVec(v,i), ( sv->e[i] = sqrt( sv->e[i] ) ) );
+      rank++;
+    }
+  }
+  return rank;
+}
+\end{verbatim}
+\end{screen}
+点群$\mathcal{P}$，$\mathcal{P}^{\prime}$が縮退していると座標変換が一意に求まらず，$\sigma_{i}$（$i=1,2,3$）のうち一つ以上が$0$となります．上記の関数ではそれに対する例外処理も入れています．点群が相異なる3個以上の点を持っていれば縮退は起こらないので，実用上はほとんど気にしなくて構いません．
+計算コスト上，支配的なのは\verb|zMat3DSymEig()|であり，計算時間のほとんどはこの関数が占めます．
+
+\verb|zVec3DDataIdentFrame()|を応用すれば，{\bf Iterative Closest Point(ICP)法}が実装できます．これはある点群（参照点群）を座標変換して，観測された別の点群にフィットさせることで，シーン内にある既知の物体の位置と姿勢を推定する計算です．参照点と観測された点とがどのように対応するかは一般的に未知なので，まず適当に近場で当たりをつけて仮の対応を決め，推定された位置・姿勢変換を適用して点群を更新し，改めて仮の対応を決め…という反復で推定精度を高めていく，というのが基本的な流れです．方法に関する解説記事は多くあるので，説明はそれらに委ねます．
+
+Zeoでの実装は次のようになっています．
+\begin{screen}
+\begin{verbatim}
+zFrame3D *zVec3DDataICP(zVec3DData *src, zVec3DData *dest, zFrame3D *frame, double sample_rate, double tol)
+{
+  zVec3DTree dest_tree, *nn;
+  zVec3DData sample_src, sample_dest;
+  zVec3D *po, p;
+  int i, iter = ZEO_VEC3DDATA_ICP_MAXITERNUM;
+  double error_max, error;
+
+  if( !zVec3DDataToTree( dest, &dest_tree ) ){
+    zVec3DTreeDestroy( &dest_tree );
+    return NULL;
+  }
+  _zVec3DDataICPInit( src, dest, frame );
+  for( i=0; i<iter; i++ ){
+    zVec3DDataInitAddrList( &sample_src );
+    zVec3DDataInitAddrList( &sample_dest );
+    zVec3DDataRewind( src );
+    error_max = 0;
+    while( ( po = zVec3DDataFetch( src ) ) ){
+      if( zRandF(0,1) > sample_rate ) continue;
+      zXform3D( frame, po, &p );
+      if( ( error = zVec3DTreeNN( &dest_tree, &p, &nn ) ) > error_max ) error_max = error;
+      zVec3DDataAdd( &sample_src, po );
+      zVec3DDataAdd( &sample_dest, &nn->data.point );
+    }
+    if( error_max < tol ) break;
+    zVec3DDataIdentFrame( &sample_src, &sample_dest, frame );
+    zVec3DDataDestroy( &sample_src );
+    zVec3DDataDestroy( &sample_dest );
+  }
+  if( i == iter )
+    ZITERWARN( iter );
+  zVec3DTreeDestroy( &dest_tree );
+  return frame;
+}
+\end{verbatim}
+\end{screen}
+
+初期化関数\verb|_zVec3DDataICPInit()|は次のものです．
+\begin{screen}
+\begin{verbatim}
+static zFrame3D *_zVec3DDataICPInit(zVec3DData *src, zVec3DData *dest, zFrame3D *frame)
+{
+  zVec3D center_src, center_dest;
+
+  zVec3DDataBarycenter( src, &center_src );
+  zVec3DDataBarycenter( dest, &center_dest );
+  zVec3DSub( &center_dest, &center_src, zFrame3DPos(frame) );
+  zMat3DIdent( zFrame3DAtt(frame) );
+  return frame;
+}
+\end{verbatim}
+\end{screen}
+
+点群\verb|src|を，別の点群\verb|dest|に漸近させる座標変換\verb|frame|を求めます．全点比較すると大変なので，適当な間引き率\verb|sample_rate|（0〜1）を与える仕様にしています．\verb|tol|は反復計算の打ち切り誤差です．
+
+次のような流れになっています．
+\begin{enumerate}
+\item \verb|dest|をkd-tree \verb|dest_tree|に変換
+\item \verb|frame|を恒等変換で初期化
+\item \verb|src|から確率\verb|sample_rate|で点を選択
+\item 最新の\verb|frame|推定値でその点を座標変換し\verb|p|とする
+\item \verb|dest_tree|の中の，\verb|p|の最近傍点を見つける
+\item \verb|p|とその点が対応付くようにして，点群\verb|sample_src|と\verb|sample_dest|にそれぞれ追加
+\item \verb|sample_src|と\verb|sample_dest|の対応点間の最大距離が\verb|tol|未満ならば反復終了
+\item \verb|zVec3DDataIdentFrame()|を使って，\verb|sample_src|から\verb|sample_dest|への座標変換\verb|frame|を推定
+\item 反復回数が上限\verb|iter|に達したら終了，さもなければ3に戻る
+\end{enumerate}
+特に難しい点はないかと思います．
+
+Stanford bunnyを使って，上記の関数を試してみました．\verb|sample_rate|は0.1，\verb|tol|は1.0×10^6とし，座標変換の真値は並進ベクトル$(-0.2,-0.2,-0.2)\sim(0.2,0.2,0.2)$，回転行列はZYXオイラー角$(-0.1\pi,-0.1\pi,-0.1\pi)\sim(0.1\pi,0.1\pi,0.1\pi)$の範囲で乱数的にとして作成しました．一例の結果がこちらです．
+
+
+紫色の点が参照点群，緑が観測点群，水色が推定された座標変換を参照点群に適用したもの（推定点群）です．推定点群が観測点群にぴったり重なっており，見分けがつきません．正しく推定できていると言えます．数十回程度試しても毎回成功しました．
+
+
+一方，ZYXオイラー角の範囲を$(-0.2\pi,-0.2\pi,-0.2\pi)\sim(0.2\pi,0.2\pi,0.2\pi)$にしたところ，結果の傾向は全く違うものになってしまいました．一例を示します．
+
+推定点群が観測点群に対して見当違いの方向にあります．成功した例も示します．
+
+
+こちらも数十回試して，成功率は5割程度でした．
+
+実際の場面では，観測点群は元形状の一部分についてしか得られなかったり，見たい物体の周辺形状までとれてしまったり，飛び値があったりして，点と点の対応の信頼性は低くなります．このため，上記の関数は実用には適しません（信頼性を上げるための改善は，現在も多くなされています）が，ICPってどんなもん？という感覚を得るのには手頃かと思います．
+
+
+
+\end{document}
