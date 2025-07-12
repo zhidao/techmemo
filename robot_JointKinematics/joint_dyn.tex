@@ -1,0 +1,1148 @@
+﻿\documentclass[a4paper]{jsarticle}
+\usepackage{amsmath,amssymb,bm}
+\usepackage[dvips]{graphicx}
+\usepackage{svg}
+
+\flushbottom
+\sloppy
+
+\setlength{\paperwidth}{210mm}
+\setlength{\paperheight}{297mm}
+\setlength{\voffset}{0mm}
+\setlength{\textwidth}{\paperwidth}
+\addtolength{\textwidth}{-30mm}
+\setlength{\textheight}{\paperheight}
+\addtolength{\textheight}{-50mm}
+\setlength{\topmargin}{-1in}
+\addtolength{\topmargin}{20mm}
+\setlength{\headheight}{0mm}
+\setlength{\headsep}{0mm}
+\setlength{\footskip}{20mm}
+\setlength{\oddsidemargin}{-1in}
+\addtolength{\oddsidemargin}{15mm}
+\setlength{\columnsep}{7mm}
+
+\title{\bf 関節の運動表現と力学}
+\author{\Large{\bf 杉原 知道}}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{関節の運動学と速度・加速度解析}
+
+\subsection{理想関節モデル}
+
+理想的な{\bf 関節}は，機械的連結によって二つの剛体間に
+ある方向のみへの相対運動を許容し，
+残りの方向への運動を拘束するものである．
+許容された運動方向の数が関節の{\bf 自由度}であり，
+0から6までの任意の整数値をとり得る．
+これを$n$とし，関節変位を$n$次元の擬ベクトル$\bm{q}$で表すことにすると，
+関節は$\bm{q}$に対する種々の運動学的写像を与えるものとも言える．
+具体的な運動学的写像の例として，
+二つの剛体リンク間の相対変位・相対速度・相対加速度を考えよう．
+
+\begin{figure}[htb]
+\begin{center}
+\includesvg[height=.15\textheight]{fig/joint.svg}
+\caption{関節の運動学モデル}
+\label{fig:joint}
+\end{center}
+\end{figure}
+
+Fig. \ref{fig:joint}のように，
+関節が変位する前のリンク座標系を$\Sigma_{\mathrm{o}}$，
+関節が変位した後のリンク座標系を$\Sigma_{\mathrm{j}}$，
+親リンク座標系を$\Sigma_{\mathrm{p}}$とそれぞれ名づける．
+また，ある二つの座標系$\Sigma_{\mathrm{a}}$，$\Sigma_{\mathrm{b}}$が与えられたときに，
+座標系$\Sigma_{\mathrm{b}}$から$\Sigma_{\mathrm{a}}$への変換を
+位置ベクトルと姿勢行列の組
+$({}^{\mathrm{a}}\bm{p}_{\mathrm{b}}, {}^{\mathrm{a}}\bm{R}_{\mathrm{b}})\in(\mathbb{R}^{3},\mathrm{SO}(3))$で
+表そう．
+特に変換先の座標系が慣性座標系であるとき，左肩に添字はつけないものとする．
+座標系の連鎖律より，
+\begin{align*}
+\begin{array}{l@{\hskip5em}l}
+\bm{p}_{\mathrm{j}}=\bm{p}_{\mathrm{p}}+\bm{R}_{\mathrm{p}}{}^{\mathrm{p}}\bm{p}_{\mathrm{j}}, &
+{}^{\mathrm{p}}\bm{p}_{\mathrm{j}}={}^{\mathrm{p}}\bm{p}_{\mathrm{o}}+{}^{\mathrm{p}}\bm{R}_{\mathrm{o}}{}^{\mathrm{o}}\bm{p}_{\mathrm{j}} \\
+\bm{R}_{\mathrm{j}}=\bm{R}_{\mathrm{p}}{}^{\mathrm{p}}\bm{R}_{\mathrm{j}}, &
+{}^{\mathrm{p}}\bm{R}_{\mathrm{j}}={}^{\mathrm{p}}\bm{R}_{\mathrm{o}}{}^{\mathrm{o}}\bm{R}_{\mathrm{j}} \\
+\end{array}
+\end{align*}
+が言える．
+ここで$({}^{\mathrm{p}}\bm{p}_{\mathrm{o}}, {}^{\mathrm{p}}\bm{R}_{\mathrm{o}})$は定数ベクトル・行列であり，
+また$({}^{\mathrm{o}}\bm{p}_{\mathrm{j}}, {}^{\mathrm{o}}\bm{R}_{\mathrm{j}})$は
+関節変位$\bm{q}$のみから決まる．
+すなわち剛体リンク座標系は，
+親リンク座標系が与えられた下で，関節変位の関数となる．
+
+また，上式を時間に関して一階微分すると，
+\begin{align*}
+\begin{array}{l@{\hskip5em}l}
+\dot{\bm{p}}_{\mathrm{j}}=\dot{\bm{p}}_{\mathrm{p}}
+ +\bm{\omega}_{\mathrm{p}}\times\bm{R}_{\mathrm{p}}{}^{\mathrm{p}}\bm{p}_{\mathrm{j}}
+ +\bm{R}_{\mathrm{p}}{}^{\mathrm{p}}\dot{\bm{p}}_{\mathrm{j}}, &
+{}^{\mathrm{p}}\dot{\bm{p}}_{\mathrm{j}}={}^{\mathrm{p}}\bm{R}_{\mathrm{o}}{}^{\mathrm{o}}\dot{\bm{p}}_{\mathrm{j}} \\
+\dot{\bm{R}}_{\mathrm{j}}=\dot{\bm{R}}_{\mathrm{p}}{}^{\mathrm{p}}\bm{R}_{\mathrm{j}}
+ +\bm{R}_{\mathrm{p}}{}^{\mathrm{p}}\dot{\bm{R}}_{\mathrm{j}}, &
+{}^{\mathrm{p}}\dot{\bm{R}}_{\mathrm{j}}={}^{\mathrm{p}}\bm{R}_{\mathrm{o}}{}^{\mathrm{o}}\dot{\bm{R}}_{\mathrm{j}} \\
+\end{array}
+\end{align*}
+姿勢の微分より，角速度の連鎖律を次のように得る．
+\begin{align*}
+\begin{array}{l@{\hskip5em}l}
+\bm{\omega}_{\mathrm{j}}=\bm{\omega}_{\mathrm{p}}+\bm{R}_{\mathrm{p}}{}^{\mathrm{p}}\bm{\omega}_{\mathrm{j}}, &
+{}^{\mathrm{p}}\bm{\omega}_{\mathrm{j}}={}^{\mathrm{p}}\bm{R}_{\mathrm{o}}{}^{\mathrm{o}}\bm{\omega}_{\mathrm{j}}
+\end{array}
+\end{align*}
+さらに速度・角速度を一階微分すれば，
+加速度・角加速度の連鎖律を次のように得る．
+\begin{align*}
+\begin{array}{l@{\hskip3em}l}
+\ddot{\bm{p}}_{\mathrm{j}}=\ddot{\bm{p}}_{\mathrm{p}}
+ +\dot{\bm{\omega}}_{\mathrm{p}}\times\bm{R}_{\mathrm{p}}{}^{\mathrm{p}}\bm{p}_{\mathrm{j}}
+ +\bm{\omega}_{\mathrm{p}}\times(\bm{\omega}_{\mathrm{p}}\times\bm{R}_{\mathrm{p}}{}^{\mathrm{p}}\bm{p}_{\mathrm{j}})
+ +2\,\dot{\bm{\omega}}_{\mathrm{p}}\times\bm{R}_{\mathrm{p}}{}^{\mathrm{p}}\dot{\bm{p}}_{\mathrm{j}}
+ +\bm{R}_{\mathrm{p}}{}^{\mathrm{p}}\ddot{\bm{p}}_{\mathrm{j}}, &
+{}^{\mathrm{p}}\ddot{\bm{p}}_{\mathrm{j}}={}^{\mathrm{p}}\bm{R}_{\mathrm{o}}{}^{\mathrm{o}}\ddot{\bm{p}}_{\mathrm{j}}
+ \\
+\dot{\bm{\omega}}_{\mathrm{j}}=\dot{\bm{\omega}}_{\mathrm{p}}
++\bm{\omega}_{\mathrm{p}}\times\bm{R}_{\mathrm{p}}{}^{\mathrm{p}}\bm{\omega}_{\mathrm{j}}
++\bm{R}_{\mathrm{p}}{}^{\mathrm{p}}\dot{\bm{\omega}}_{\mathrm{j}}, &
+{}^{\mathrm{p}}\dot{\bm{\omega}}_{\mathrm{j}}={}^{\mathrm{p}}\bm{R}_{\mathrm{o}}{}^{\mathrm{o}}\dot{\bm{\omega}}_{\mathrm{j}}
+\end{array}
+\end{align*}
+Luh, Walker, Paulの方法に従い，
+姿勢をリンク座標系に合わせた表現に変えると，
+\begin{align*}
+{}^{\mathrm{j}}\hat{\bm{v}}_{\mathrm{j}}
+&\overset{\mathrm{def}}{=}\bm{R}_{\mathrm{j}}^{\mathrm{T}}\dot{\bm{p}}_{\mathrm{j}}
+={}^{\mathrm{p}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}\left(
+{}^{\mathrm{p}}\hat{\bm{v}}_{\mathrm{p}}
+ +{}^{\mathrm{p}}\hat{\bm{\omega}}_{\mathrm{p}}\times{}^{\mathrm{p}}\bm{p}_{\mathrm{j}}
+\right)
+ +{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\dot{\bm{p}}_{\mathrm{j}} \\
+{}^{\mathrm{j}}\hat{\bm{\omega}}_{\mathrm{j}}
+&\overset{\mathrm{def}}{=}\bm{R}_{\mathrm{j}}^{\mathrm{T}}\bm{\omega}_{\mathrm{j}}
+={}^{\mathrm{p}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{p}}\bm{\omega}_{\mathrm{p}}
+ +{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\bm{\omega}_{\mathrm{j}} \\
+{}^{\mathrm{j}}\hat{\bm{a}}_{\mathrm{j}}
+&\overset{\mathrm{def}}{=}\bm{R}_{\mathrm{j}}^{\mathrm{T}}\ddot{\bm{p}}_{\mathrm{j}}
+={}^{\mathrm{p}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}\left\{
+ {}^{\mathrm{p}}\hat{\bm{a}}_{\mathrm{p}}
+ +{}^{\mathrm{p}}\hat{\bm{\alpha}}_{\mathrm{p}}\times{}^{\mathrm{p}}\bm{p}_{\mathrm{j}}
+ +{}^{\mathrm{p}}\hat{\bm{\omega}}_{\mathrm{p}}\times({}^{\mathrm{p}}\hat{\bm{\omega}}_{\mathrm{p}}\times{}^{\mathrm{p}}\bm{p}_{\mathrm{j}})
+\right\}
+ +2\,({}^{\mathrm{p}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{p}}\hat{\bm{\omega}}_{\mathrm{p}})\times
+   ({}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\dot{\bm{p}}_{\mathrm{j}})
+ +{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\ddot{\bm{p}}_{\mathrm{j}}
+ \\
+{}^{\mathrm{j}}\hat{\bm{\alpha}}_{\mathrm{j}}
+&\overset{\mathrm{def}}{=}\bm{R}_{\mathrm{j}}^{\mathrm{T}}\dot{\bm{\omega}}_{\mathrm{j}}
+={}^{\mathrm{p}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{p}}\hat{\bm{\alpha}}_{\mathrm{p}}
+ +({}^{\mathrm{p}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{p}}\hat{\bm{\omega}}_{\mathrm{p}})\times
+   ({}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\bm{\omega}_{\mathrm{j}})
+ +{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\dot{\bm{\omega}}_{\mathrm{j}}
+\end{align*}
+
+これらにおいて，
+${{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}}^{\mathrm{T}}{}^{\mathrm{o}}\dot{\bm{p}}_{\mathrm{j}}$，
+${}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\bm{\omega}_{\mathrm{j}}$，
+${}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\ddot{\bm{p}}_{\mathrm{j}}$，
+${}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\dot{\bm{\omega}}_{\mathrm{j}}$は
+関節速度$\dot{\bm{q}}$および関節加速度$\ddot{\bm{q}}$のみから決まる，
+$\Sigma_{\mathrm{o}}$からの相対速度・相対加速度
+（を姿勢のみリンク座標系$\Sigma_{\mathrm{j}}$に直したもの）である．
+すなわち剛体リンクの速度，加速度は，
+親リンク速度，加速度が与えられた下で，
+関節速度および関節加速度の関数となる．
+
+
+\subsection{理想関節モデルの運動空間と拘束空間}
+
+以下において，
+\begin{align*}
+\hat{\bm{x}}\overset{\mathrm{def}}{=}\left[\begin{array}{@{\,}c@{\,}}
+ 1 \\ 0 \\ 0
+\end{array}\right],\quad
+\hat{\bm{y}}\overset{\mathrm{def}}{=}\left[\begin{array}{@{\,}c@{\,}}
+ 0 \\ 1 \\ 0
+\end{array}\right],\quad
+\hat{\bm{z}}\overset{\mathrm{def}}{=}\left[\begin{array}{@{\,}c@{\,}}
+ 0 \\ 0 \\ 1
+\end{array}\right]
+\end{align*}
+とし，
+$\bm{0}$を零ベクトル，
+$\bm{O}$を零行列，
+$\bm{1}$を単位行列とする（ベクトル・行列のサイズは文脈で決まるものとする）．
+また，
+姿勢行列$\bm{R}$と等価な角軸ベクトルへの変換を$\bm{\xi}(\bm{R})$，あるいは
+姿勢行列${}^{\mathrm{a}}\bm{R}_{\mathrm{b}}$と等価な角軸ベクトルを単に${}^{\mathrm{a}}\bm{\xi}_{\mathrm{b}}$と
+表す．
+
+既に述べたように，
+$({}^{\mathrm{o}}\bm{p}_{\mathrm{j}}, {}^{\mathrm{o}}\bm{R}_{\mathrm{j}})$は関節変位$\bm{q}$のみの関数であり，
+その具体的な形は関節の種類によって決まる．
+また，関節に許容される運動方向は，
+関節変位による座標系変化の接方向として現れる．
+すなわち関節速度$\dot{\bm{q}}$に対し，
+\begin{align*}
+\left[\begin{array}{@{\,}c@{\,}}
+ {}^{\mathrm{o}}\dot{\bm{p}}_{\mathrm{j}} \\
+ {}^{\mathrm{o}}\bm{\omega}_{\mathrm{j}}
+\end{array}\right]
+={}^{\mathrm{o}}\bm{H}_{\mathrm{Jj}}\dot{\bm{q}}
+\end{align*}
+を満たす$6\times n$正規行列${}^{\mathrm{o}}\bm{H}_{\mathrm{Jj}}$が存在し，
+これが理想関節モデルにおけるリンク座標系で見た運動空間の基底となる．
+前節と同様に，姿勢のみ$\Sigma_{\mathrm{j}}$から見たものに変換すると，
+\begin{align*}
+\left[\begin{array}{@{\,}c@{\,}}
+ {}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\dot{\bm{p}}_{\mathrm{j}} \\
+ {}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\bm{\omega}_{\mathrm{j}}
+\end{array}\right]
+={}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}\dot{\bm{q}},\quad
+\mbox{ただし}
+{}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}\overset{\mathrm{def}}{=}\left[\begin{array}{@{\,}cc@{\,}}
+ {}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}} & \bm{O} \\
+ \bm{O} & {}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}} \\
+\end{array}\right]
+{}^{\mathrm{o}}\bm{H}_{\mathrm{Jj}}
+\end{align*}
+となる．
+元の式を一階微分すれば，次を得る．
+\begin{align*}
+\left[\begin{array}{@{\,}c@{\,}}
+ {}^{\mathrm{o}}\ddot{\bm{p}}_{\mathrm{j}} \\
+ {}^{\mathrm{o}}\dot{\bm{\omega}}_{\mathrm{j}}
+\end{array}\right]
+={}^{\mathrm{o}}\bm{H}_{\mathrm{Jj}}\ddot{\bm{q}}+{}^{\mathrm{o}}\dot{\bm{H}}_{\mathrm{Jj}}\dot{\bm{q}}
+\end{align*}
+これも姿勢のみ$\Sigma_{\mathrm{j}}$から見たものに変換すると，
+\begin{align*}
+\left[\begin{array}{@{\,}c@{\,}}
+ {}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\ddot{\bm{p}}_{\mathrm{j}} \\
+ {}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\dot{\bm{\omega}}_{\mathrm{j}}
+\end{array}\right]
+={}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}\ddot{\bm{q}}+\left[\begin{array}{@{\,}cc@{\,}}
+ {}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}} & \bm{O} \\
+ \bm{O} & {}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}} \\
+\end{array}\right]
+{}^{\mathrm{o}}\dot{\bm{H}}_{\mathrm{Jj}}\dot{\bm{q}}
+\end{align*}
+となる．
+
+
+${}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}$と相補関係にある$6\times (6-n)$正規行列${}^{\mathrm{j}}\bm{H}_{\mathrm{Cj}}$は，
+運動が拘束される方向の基底である．
+${}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}$と${}^{\mathrm{j}}\bm{H}_{\mathrm{Cj}}$の間には次の関係がある．
+\begin{align*}
+{}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}^{\mathrm{T}}{}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}=\bm{1},\quad
+{}^{\mathrm{j}}\bm{H}_{\mathrm{Cj}}^{\mathrm{T}}{}^{\mathrm{j}}\bm{H}_{\mathrm{Cj}}=\bm{1},\quad
+{}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}^{\mathrm{T}}{}^{\mathrm{j}}\bm{H}_{\mathrm{Cj}}=\bm{O}
+\end{align*}
+${}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}$に対する${}^{\mathrm{j}}\bm{H}_{\mathrm{Cj}}$の決め方は一意ではなく，
+便宜に合わせて選んで良い．
+以降は，
+${}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}$が張る空間を{\bf 運動空間}，
+${}^{\mathrm{j}}\bm{H}_{\mathrm{Cj}}$が張る空間を{\bf 拘束空間}とそれぞれ呼ぼう．
+
+
+関節に作用している6軸力${}^{\mathrm{j}}\bm{w}_{\mathrm{j}}=[{}^{\mathrm{j}}\bm{f}_{\mathrm{j}}^{\mathrm{T}}~~{}^{\mathrm{j}}\bm{n}_{\mathrm{j}}^{\mathrm{T}}]^{\mathrm{T}}$を，
+次のように運動空間と拘束空間に分解することを考える．
+\begin{align*}
+{}^{\mathrm{j}}\bm{w}_{\mathrm{j}}={}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}\bm{u}+{}^{\mathrm{j}}\bm{H}_{\mathrm{Cj}}\bm{\lambda}
+\end{align*}
+$\bm{u}$は駆動力（アクチュエータにより発揮する力），$\bm{\lambda}$は拘束力（軸受により支える力）である．
+$\bm{u}$，$\bm{\lambda}$は${}^{\mathrm{j}}\bm{w}_{\mathrm{j}}$から
+それぞれ次のように取り出すことができる．
+\begin{align*}
+{}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}^{\mathrm{T}}\,{}^{\mathrm{j}}\bm{w}_{\mathrm{j}}=\bm{u},\quad
+{}^{\mathrm{j}}\bm{H}_{\mathrm{Cj}}^{\mathrm{T}}\,{}^{\mathrm{j}}\bm{w}_{\mathrm{j}}=\bm{\lambda}
+\end{align*}
+
+
+\subsection{個々の関節モデルの運動表現}
+
+\begin{figure*}[tb]
+\begin{center}
+\begin{minipage}{.3\textwidth}
+ \begin{center}
+ \includesvg[height=.11\textheight]{fig/joint_fixed.svg}
+ \caption{固定関節}
+ \label{fig:joint_fixed}
+ \end{center}
+\end{minipage}
+\begin{minipage}{.3\textwidth}
+ \begin{center}
+ \includesvg[height=.11\textheight]{fig/joint_revol.svg}
+ \caption{回転関節}
+ \label{fig:joint_revol}
+ \end{center}
+\end{minipage}
+\begin{minipage}{.3\textwidth}
+ \begin{center}
+ \includesvg[height=.11\textheight]{fig/joint_prism.svg}
+ \caption{直動関節}
+ \label{fig:joint_prism}
+ \end{center}
+\end{minipage}
+\vskip\baselineskip
+\begin{minipage}{.3\textwidth}
+ \begin{center}
+ \includesvg[height=.11\textheight]{fig/joint_cylin.svg}
+ \caption{円筒関節}
+ \label{fig:joint_cylin}
+ \end{center}
+\end{minipage}
+\begin{minipage}{.3\textwidth}
+ \begin{center}
+ \includesvg[height=.11\textheight]{fig/joint_hooke.svg}
+ \caption{自在継手}
+ \label{fig:joint_hooke}
+ \end{center}
+\end{minipage}
+\begin{minipage}{.3\textwidth}
+ \begin{center}
+ \includesvg[height=.11\textheight]{fig/joint_spher.svg}
+ \caption{球面関節}
+ \label{fig:joint_spher}
+ \end{center}
+\end{minipage}
+\vskip\baselineskip
+\begin{minipage}{.38\textwidth}
+ \begin{center}
+ \includesvg[height=.11\textheight]{fig/joint_plana.svg}
+ \caption{平面関節}
+ \label{fig:joint_plana}
+ \end{center}
+\end{minipage}
+\begin{minipage}{.4\textwidth}
+ \begin{center}
+ \includesvg[height=.11\textheight]{fig/joint_float.svg}
+ \caption{浮遊関節}
+ \label{fig:joint_float}
+ \end{center}
+\end{minipage}
+\end{center}
+\end{figure*}
+
+具体的な関節モデルとして，
+Fig. \ref{fig:joint_fixed}$\sim$\ref{fig:joint_float}に示す次の7種を考えよう．
+\begin{enumerate}
+\item{固定関節 --- $n=0$}
+\item{回転関節 --- $z$軸回り回転，$n=1$}
+\item{直動関節 --- $z$軸方向並進，$n=1$}
+\item{円筒関節 --- $z$軸回り回転のち$z$軸方向直動，$n=2$}
+\item{自在継手 --- $z$軸回り回転のち$y$軸回り回転，$n=2$}
+\item{球面関節 --- 原点まわり3次元的回転，$n=3$}
+\item{平面関節 --- $x$軸および$y$軸方向並進のち$z$軸まわり回転，$n=3$}
+\item{浮遊関節 --- 3次元的並進→原点まわり3次元的回転，$n=6$}
+\end{enumerate}
+前節までに見たように，関節の運動は，
+関節変位による座標変換$({}^{\mathrm{o}}\bm{p}_{\mathrm{j}}, {}^{\mathrm{o}}\bm{R}_{\mathrm{j}})$と
+運動空間${}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}$および拘束空間${}^{\mathrm{j}}\bm{H}_{\mathrm{Cj}}$，
+さらに加速度の関係に現れる${}^{\mathrm{o}}\dot{\bm{H}}_{\mathrm{Jj}}\dot{\bm{q}}$によって
+記述される．
+本節では，
+上記の各々についてこれらの具体的表現を調べる．
+
+\vspace{\baselineskip}
+
+\noindent{\bf 固定関節}
+
+固定関節をFig. \ref{fig:joint_fixed}に示す．
+これは関節変位を許容しない（i.e. $n=0$）．
+したがって，
+\begin{align*}
+&{}^{\mathrm{o}}\bm{p}_{\mathrm{j}}\equiv\bm{0},\quad
+{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}\equiv\bm{1}
+\end{align*}
+である．
+運動空間は存在しないので，明らかに${}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}\equiv\bm{O}$，
+${}^{\mathrm{j}}\bm{H}_{\mathrm{Cj}}\equiv\bm{1}$，
+${}^{\mathrm{o}}\dot{\bm{H}}_{\mathrm{Jj}}\dot{\bm{q}}\equiv\bm{0}$である．
+
+\vskip\baselineskip
+
+\noindent{\bf 回転関節}
+
+回転関節をFig. \ref{fig:joint_revol}に示す．
+$z$軸回りの回転角$q$のみを関節変位として許容する（i.e. $n=1$）．
+したがって，
+\begin{align*}
+&{}^{\mathrm{o}}\bm{p}_{\mathrm{j}}\equiv\bm{0},\quad
+{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}=\left[\begin{array}{@{\,}ccc@{\,}}
+ C &-S & 0 \\
+ S & C & 0 \\
+ 0 & 0 & 1 \\
+\end{array}\right]
+\end{align*}
+である．
+ただし$C\overset{\mathrm{def}}{=}\cos q$，$S\overset{\mathrm{def}}{=}\sin q$とおいた．
+また，
+\begin{align*}
+{}^{\mathrm{o}}\dot{\bm{p}}_{\mathrm{j}}\equiv\bm{0},\quad
+{}^{\mathrm{o}}\bm{\omega}_{\mathrm{j}}=\dot{q}\,\hat{\bm{z}}
+\end{align*}
+なので，
+\begin{align*}
+{}^{\mathrm{o}}\bm{H}_{\mathrm{Jj}}=\left[\begin{array}{@{\,}c@{\,}}
+ \bm{0} \\ \hat{\bm{z}}
+\end{array}\right]
+\end{align*}
+である．
+これは姿勢変換しても変わらず
+\begin{align*}
+{}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}=\left[\begin{array}{@{\,}cc@{\,}}
+ {}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}} & \bm{O} \\
+ \bm{O} & {}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}} \\
+\end{array}\right]\left[\begin{array}{@{\,}c@{\,}}
+ \bm{0} \\ \hat{\bm{z}}
+\end{array}\right]=\left[\begin{array}{@{\,}c@{\,}}
+ \bm{0} \\ \hat{\bm{z}}
+\end{array}\right],\quad
+{}^{\mathrm{j}}\bm{H}_{\mathrm{Cj}}=\left[\begin{array}{@{\,}ccc@{\,}}
+ \bm{1} & \bm{0} & \bm{0} \\
+ \bm{O} & \hat{\bm{x}} & \hat{\bm{y}}
+\end{array}\right]
+\end{align*}
+として良い．
+${}^{\mathrm{o}}\bm{H}_{\mathrm{Jj}}$は定数行列なので，
+${}^{\mathrm{o}}\dot{\bm{H}}_{\mathrm{Jj}}\dot{\bm{q}}\equiv\bm{0}$である．
+
+
+\vskip\baselineskip
+
+\noindent{\bf 直動関節}
+
+直動関節をFig. \ref{fig:joint_prism}に示す．
+$z$軸方向の並進量$q$のみを関節変位として許容する（i.e. $n=1$）．
+したがって，
+\begin{align*}
+&{}^{\mathrm{o}}\bm{p}_{\mathrm{j}}=q\hat{\bm{z}},\quad
+{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}\equiv\bm{1}
+\end{align*}
+であり，明らかに，
+\begin{align*}
+&{}^{\mathrm{o}}\dot{\bm{p}}_{\mathrm{j}}=\dot{q}\hat{\bm{z}},\quad
+{}^{\mathrm{o}}\bm{\omega}_{\mathrm{j}}\equiv\bm{0}
+\end{align*}
+なので，
+\begin{align*}
+{}^{\mathrm{o}}\bm{H}_{\mathrm{Jj}}=\left[\begin{array}{@{\,}c@{\,}}
+ \hat{\bm{z}} \\ \bm{0}
+\end{array}\right]
+\end{align*}
+である．これも姿勢変換に関して変わらず
+\begin{align*}
+{}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}=\left[\begin{array}{@{\,}cc@{\,}}
+ {}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}} & \bm{O} \\
+ \bm{O} & {}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}} \\
+\end{array}\right]\left[\begin{array}{@{\,}c@{\,}}
+ \hat{\bm{z}} \\ \bm{0}
+\end{array}\right]=\left[\begin{array}{@{\,}c@{\,}}
+ \hat{\bm{z}} \\ \bm{0}
+\end{array}\right],\quad
+{}^{\mathrm{j}}\bm{H}_{\mathrm{Cj}}=\left[\begin{array}{@{\,}ccc@{\,}}
+ \hat{\bm{x}} & \hat{\bm{y}} & \bm{O} \\
+ \bm{0} & \bm{0} & \bm{1} \\
+\end{array}\right]
+\end{align*}
+として良い．
+直動関節においても${}^{\mathrm{o}}\dot{\bm{H}}_{\mathrm{Jj}}\dot{\bm{q}}\equiv\bm{0}$である．
+
+\vskip\baselineskip
+
+\noindent{\bf 円筒関節}
+
+円筒関節をFig. \ref{fig:joint_cylin}に示す．
+$z$軸方向の並進量$q_{1}$と$z$軸回りの回転角$q_{2}$を関節変位として許容する
+（i.e. $n=2$）．
+$\bm{q}=[q_{1}~~q_{2}]^{\mathrm{T}}$とおくと，
+\begin{align*}
+&{}^{\mathrm{o}}\bm{p}_{\mathrm{j}}=q_{1}\hat{\bm{z}},\quad
+{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}=\left[\begin{array}{@{\,}ccc@{\,}}
+ C_{2} &-S_{2} & 0 \\
+ S_{2} & C_{2} & 0 \\
+ 0 & 0 & 1 \\
+\end{array}\right]
+\end{align*}
+である．
+ただし$C_{2}\overset{\mathrm{def}}{=}\cos q_{2}$，$S_{2}\overset{\mathrm{def}}{=}\sin q_{2}$とおいた．
+これは回転関節と直動関節の合成であり，ただちに
+\begin{align*}
+{}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}=\left[\begin{array}{@{\,}cc@{\,}}
+ \hat{\bm{z}} & \bm{0} \\
+ \bm{0} & \hat{\bm{z}} \\
+\end{array}\right],\quad
+{}^{\mathrm{j}}\bm{H}_{\mathrm{Cj}}=\left[\begin{array}{@{\,}cccc@{\,}}
+ \hat{\bm{x}} & \hat{\bm{y}} & \bm{O} & \bm{O} \\
+ \bm{0} & \bm{0} & \hat{\bm{x}} & \hat{\bm{y}} \\
+\end{array}\right],\quad
+{}^{\mathrm{o}}\dot{\bm{H}}_{\mathrm{Jj}}\dot{\bm{q}}\equiv\bm{0}
+\end{align*}
+とわかる．
+
+\vskip\baselineskip
+
+\noindent{\bf 自在継手}
+
+自在継手をFig. \ref{fig:joint_hooke}に示す．
+これは$z$軸回りに角度$q_{1}$，
+さらにその後$y$軸回りに角度$q_{2}$だけ変位することを許容する（$n=2$）．
+関節変位を$\bm{q}=[q_{1}~~q_{2}]^{\mathrm{T}}$とおくと，
+\begin{align*}
+&{}^{\mathrm{o}}\bm{p}_{\mathrm{j}}\equiv\bm{0},\quad
+{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}=\left[\begin{array}{@{\,}ccc@{\,}}
+ C_{1} &-S_{1} & 0 \\
+ S_{1} & C_{1} & 0 \\
+ 0 & 0 & 1 \\
+\end{array}\right]\left[\begin{array}{@{\,}ccc@{\,}}
+ C_{2} & 0 & S_{2} \\
+ 0 & 1 & 0 \\
+-S_{2} & 0 & C_{2} \\
+\end{array}\right]=\left[\begin{array}{@{\,}ccc@{\,}}
+ C_{1}C_{2} &-S_{1} & C_{1}S_{2} \\
+ S_{1}C_{2} & C_{1} & S_{1}S_{2} \\
+     -S_{2} & 0     &      C_{2} \\
+\end{array}\right]
+\end{align*}
+である．
+ただし$C_{1}\overset{\mathrm{def}}{=}\cos q_{1}$，$S_{1}\overset{\mathrm{def}}{=}\sin q_{1}$，
+$C_{2}\overset{\mathrm{def}}{=}\cos q_{2}$，$S_{2}\overset{\mathrm{def}}{=}\sin q_{2}$とそれぞれおいた．
+これらより，
+\begin{align*}
+{}^{\mathrm{o}}\dot{\bm{p}}_{\mathrm{j}}\equiv\bm{0},\quad
+{}^{\mathrm{o}}\bm{\omega}_{\mathrm{j}}
+&=\left[\begin{array}{@{\,}c@{\,}}
+ 0 \\ 0 \\ \dot{q}_{1}
+\end{array}\right]
+ +\left[\begin{array}{@{\,}ccc@{\,}}
+ C_{1} &-S_{1} & 0 \\
+ S_{1} & C_{1} & 0 \\
+ 0 & 0 & 1 \\
+\end{array}\right]\left[\begin{array}{@{\,}c@{\,}}
+ 0 \\ \dot{q}_{2} \\ 0
+\end{array}\right]
+=\left[\begin{array}{@{\,}cc@{\,}}
+ 0 &-S_{1} \\
+ 0 & C_{1} \\
+ 1 & 0     \\
+\end{array}\right]\left[\begin{array}{@{\,}c@{\,}}
+ \dot{q}_{1} \\ \dot{q}_{2}
+\end{array}\right]
+\end{align*}
+なので，
+\begin{align*}
+{}^{\mathrm{o}}\bm{H}_{\mathrm{Jj}}=\left[\begin{array}{@{\,}cc@{\,}}
+ \bm{0} & \bm{0} \\
+  0 &-S_{1} \\
+  0 & C_{1} \\
+  1 & 0     \\
+\end{array}\right],\quad
+{}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}=\left[\begin{array}{@{\,}cc@{\,}}
+ {}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}} & \bm{O} \\
+ \bm{O} & {}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}} \\
+\end{array}\right]{}^{\mathrm{o}}\bm{H}_{\mathrm{Jj}}
+=\left[\begin{array}{@{\,}cc@{\,}}
+ \bm{0} & \bm{0} \\
+ -S_{2} & 0 \\
+  0     & 1 \\
+  C_{2} & 0 \\
+\end{array}\right],\quad
+{}^{\mathrm{j}}\bm{H}_{\mathrm{Cj}}=\left[\begin{array}{@{\,}cc@{\,}}
+ \bm{1} & \bm{0} \\
+ \bm{O} & C_{2} \\
+ \bm{O} & 0     \\
+ \bm{O} & S_{2} \\
+\end{array}\right]
+\end{align*}
+となる．
+また，
+\begin{align*}
+{}^{\mathrm{o}}\dot{\bm{H}}_{\mathrm{Jj}}\dot{\bm{q}}
+=\dot{q}_{1}\dot{q}_{2}\,\left[\begin{array}{@{\,}c@{\,}}
+ \bm{0} \\
+  -C_{1} \\
+  -S_{1} \\
+   0     \\
+\end{array}\right]\quad\Rightarrow\quad
+\left[\begin{array}{@{\,}cc@{\,}}
+ {}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}} & \bm{O} \\
+ \bm{O} & {}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}} \\
+\end{array}\right]
+{}^{\mathrm{o}}\dot{\bm{H}}_{\mathrm{Jj}}\dot{\bm{q}}
+=\dot{q}_{1}\dot{q}_{2}\,\left[\begin{array}{@{\,}c@{\,}}
+ \bm{0} \\
+-C_{2} \\
+ 0     \\
+-S_{2} \\
+\end{array}\right]
+\end{align*}
+である．
+
+\vskip\baselineskip
+
+\noindent{\bf 球面関節}
+
+球面関節をFig. \ref{fig:joint_spher}に示す．
+リンク座標系原点まわりの3次元的回転を関節変位として許容する（$n=3$）．
+関節変位の与え方には工夫を要する．
+特異点の問題に煩わされることを避けるため，
+本稿では相対的な姿勢変化を表す角軸ベクトル
+$\bm{q}={}^{\mathrm{o}}\bm{\xi}_{\mathrm{j}}$を用いることにする．
+すなわち，
+\begin{align*}
+&{}^{\mathrm{o}}\bm{p}_{\mathrm{j}}\equiv\bm{0},\quad
+{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}=\bm{R}_{\xi}(\bm{q})
+\end{align*}
+ただし$\bm{R}_{\xi}(\bm{\xi})$は，
+角軸ベクトル$\bm{\xi}$と等価な回転行列を意味する．
+また，
+関節速度には相対角速度${}^{\mathrm{o}}\bm{\omega}_{\mathrm{j}}$を，
+関節加速度には相対角加速度${}^{\mathrm{o}}\dot{\bm{\omega}}_{\mathrm{j}}$を直接与え，
+物理的に明確な意味を持たない$\dot{\bm{q}}$や$\ddot{\bm{q}}$は用いない．
+便宜上，
+\begin{align*}
+{}^{\mathrm{o}}\bm{H}_{\mathrm{Jj}}\equiv\left[\begin{array}{@{\,}c@{\,}}
+ \bm{O} \\ \bm{1}
+\end{array}\right]\quad\Rightarrow\quad
+{}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}=\left[\begin{array}{@{\,}c@{\,}}
+ \bm{O} \\ {}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}
+\end{array}\right],\quad
+{}^{\mathrm{j}}\bm{H}_{\mathrm{Cj}}\equiv\left[\begin{array}{@{\,}c@{\,}}
+ \bm{1} \\ \bm{O}
+\end{array}\right],\quad
+{}^{\mathrm{o}}\dot{\bm{H}}_{\mathrm{Jj}}\dot{\bm{q}}\equiv\bm{0}
+\end{align*}
+とする．
+このようにすることで，$\bm{q}$の微分形式との不整合という問題は生じるが，
+運動空間と拘束空間の基底行列を定数行列にできるという利点がある．
+
+\vskip\baselineskip
+
+\noindent{\bf 平面関節}
+
+平面関節をFig. \ref{fig:joint_plana}に示す．
+$x$軸方向の並進量$q_{1}$，
+$y$軸方向の並進量$q_{2}$，
+$z$軸回りの回転角$q_{3}$を関節変位とする
+（i.e. $n=3$）．
+$\bm{q}=[q_{1}~~q_{2}~~q_{3}]^{\mathrm{T}}$とおくと，
+\begin{align*}
+&{}^{\mathrm{o}}\bm{p}_{\mathrm{j}}=q_{1}\hat{\bm{x}}+q_{2}\hat{\bm{y}},\quad
+{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}=\left[\begin{array}{@{\,}ccc@{\,}}
+ C_{3} &-S_{3} & 0 \\
+ S_{3} & C_{3} & 0 \\
+ 0 & 0 & 1 \\
+\end{array}\right]
+\end{align*}
+である．
+ただし$C_{3}\overset{\mathrm{def}}{=}\cos q_{3}$，$S_{3}\overset{\mathrm{def}}{=}\sin q_{3}$とおいた．
+円筒関節と同様に考えれば，
+\begin{align*}
+{}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}=\left[\begin{array}{@{\,}ccc@{\,}}
+ \hat{\bm{x}} & \hat{\bm{y}} & \bm{0} \\
+ \bm{0} & \bm{0} & \hat{\bm{z}} \\
+\end{array}\right],\quad
+{}^{\mathrm{j}}\bm{H}_{\mathrm{Cj}}=\left[\begin{array}{@{\,}ccc@{\,}}
+ \hat{\bm{z}} & \bm{O} & \bm{O} \\
+ \bm{0} & \hat{\bm{x}} & \hat{\bm{y}} \\
+\end{array}\right],\quad
+{}^{\mathrm{o}}\dot{\bm{H}}_{\mathrm{Jj}}\dot{\bm{q}}\equiv\bm{0}
+\end{align*}
+とわかる．
+
+\vskip\baselineskip
+
+\noindent{\bf 浮遊関節}
+
+浮遊関節をFig. \ref{fig:joint_float}に示す．
+これはリンク座標系の3次元的並進および3次元的回転を関節変位として許容し（$n=6$），剛体運動を全く拘束しない．
+関節変位$\bm{q}\overset{\mathrm{def}}{=}[\bm{q}_{\mathrm{L}}^{\mathrm{T}}~~\bm{q}_{\mathrm{A}}^{\mathrm{T}}]^{\mathrm{T}}$のうち，
+最初の3成分$\bm{q}_{\mathrm{L}}$を相対的な並進量，
+残りの3成分$\bm{q}_{\mathrm{A}}$を球面関節と同じく角軸ベクトルによる相対的な姿勢変化量とする．
+すなわち，
+\begin{align*}
+&{}^{\mathrm{o}}\bm{p}_{\mathrm{j}}=\bm{q}_{\mathrm{L}},\quad
+{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}=\bm{R}_{\xi}(\bm{q}_{\mathrm{A}})
+\end{align*}
+さらに姿勢変化に関する関節速度および関節加速度を，
+球面関節と同様に相対角速度${}^{\mathrm{o}}\bm{\omega}_{\mathrm{j}}$および
+相対角加速度${}^{\mathrm{o}}\dot{\bm{\omega}}_{\mathrm{j}}$で直接与えることにする．
+すなわち
+関節速度を$\dot{\bm{q}}$の代わりに
+$[\dot{\bm{q}}_{\mathrm{L}}^{\mathrm{T}}~~{}^{\mathrm{o}}\bm{\omega}_{\mathrm{j}}^{\mathrm{T}}]^{\mathrm{T}}$，
+関節加速度を$\ddot{\bm{q}}$の代わりに
+$[\ddot{\bm{q}}_{\mathrm{L}}^{\mathrm{T}}~~{}^{\mathrm{o}}\dot{\bm{\omega}}_{\mathrm{j}}^{\mathrm{T}}]^{\mathrm{T}}$で
+それぞれ与える．
+このときリンク座標系で見た運動空間の基底は
+\begin{align*}
+{}^{\mathrm{o}}\bm{H}_{\mathrm{Jj}}\equiv\left[\begin{array}{@{\,}cc@{\,}}
+ \bm{1} & \bm{O} \\
+ \bm{O} & \bm{1} \\
+\end{array}\right]\quad\Rightarrow\quad
+{}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}=\left[\begin{array}{@{\,}cc@{\,}}
+ {}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}} & \bm{O} \\
+ \bm{O} & {}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}} \\
+\end{array}\right]
+\end{align*}
+となり，拘束空間は存在しないので${}^{\mathrm{j}}\bm{H}_{\mathrm{Cj}}\equiv\bm{O}$である．
+また，${}^{\mathrm{o}}\dot{\bm{H}}_{\mathrm{Jj}}\dot{\bm{q}}\equiv\bm{0}$である．
+
+
+
+
+\section{関節変位の加減算と離散的積分・微分近似}
+
+回転関節，直動関節，円筒関節，自在継手，平面関節において，
+関節変位は加減法について閉じている．
+すなわち関節変位が$\bm{q}_{-}$であるときに
+増分$\varDelta\bm{q}$が与えられたとすると，
+その後の関節変位$\bm{q}_{+}$は次式のように直接的に求まる．
+\begin{align*}
+\bm{q}_{+}=\bm{q}_{-}+\varDelta\bm{q}
+\end{align*}
+これの応用として，
+関節変位が$\bm{q}_{-}$であるときに
+関節速度$\dot{\bm{q}}$が与えられたとすると，
+微小時間$\varDelta t$後の関節変位$\bm{q}_{+}$を
+次式のように近似することができる．
+\begin{align*}
+\bm{q}_{+}\simeq\bm{q}_{-}+\dot{\bm{q}}\varDelta t
+\end{align*}
+また，微小時間$\varDelta t$の間に関節変位が$\bm{q}_{-}$から$\bm{q}_{+}$へと変化したとすると，
+この間の関節速度$\dot{\bm{q}}_{+}$および関節加速度$\ddot{\bm{q}}_{+}$は
+それぞれ
+\begin{align*}
+\dot{\bm{q}}_{+}\simeq\frac{\bm{q}_{+}-\bm{q}_{-}}{\varDelta t},\quad
+\ddot{\bm{q}}_{+}\simeq\frac{\dot{\bm{q}}_{+}-\dot{\bm{q}}_{-}}{\varDelta t}
+\end{align*}
+と近似できる．
+ただし$\dot{\bm{q}}_{-}$は変化前の関節速度である．
+
+球面関節の場合，関節変位の加減算は意味を持たない．
+増分$\varDelta\bm{q}$は角軸ベクトルであり，
+変化前の姿勢を${}^{\mathrm{o}}\bm{R}_{j-}$，
+変化後の姿勢を${}^{\mathrm{o}}\bm{R}_{j+}$とおくと次式が成り立つ．
+\begin{align*}
+{}^{\mathrm{o}}\bm{R}_{j+}=\bm{R}_{\xi}(\varDelta\bm{q}){}^{\mathrm{o}}\bm{R}_{j-}
+\end{align*}
+したがって，関節変位が$\bm{q}_{-}$であるときに
+増分$\varDelta\bm{q}$が与えられたとすると，
+その後の関節変位$\bm{q}_{+}$は
+\begin{align*}
+\bm{q}_{+}
+=\bm{\xi}\left(\bm{R}_{\xi}(\varDelta\bm{q})\bm{R}_{\xi}(\bm{q}_{-})\right)
+\end{align*}
+となる．
+これを応用し，
+関節変位が$\bm{q}_{-}$であるときに
+相対角速度${}^{\mathrm{o}}\bm{\omega}_{\mathrm{j}}$が与えられたときの
+微小時間$\varDelta t$後の関節変位$\bm{q}_{+}$は，次のように近似できる．
+\begin{align*}
+\bm{q}_{+}
+\simeq
+\bm{\xi}\left(\bm{R}_{\xi}({}^{\mathrm{o}}\bm{\omega}_{\mathrm{j}}\varDelta t)\bm{R}_{\xi}(\bm{q}_{-})\right)
+\end{align*}
+また微小時間$\varDelta t$の間に
+関節変位が$\bm{q}_{-}$から$\bm{q}_{+}$へと変化した場合，
+関節速度（角速度）および関節加速度（角加速度）はそれぞれ
+次のように近似できる．
+\begin{align*}
+{}^{\mathrm{o}}\bm{\omega}_{\mathrm{j}}\simeq
+\frac{\bm{\xi}\left(\bm{R}_{\xi}(\bm{q}_{+})\bm{R}_{\xi}(\bm{q}_{-})^{\mathrm{T}}\right)}
+     {\varDelta t},\quad
+{}^{\mathrm{o}}\dot{\bm{\omega}}_{\mathrm{j}}\simeq
+\frac{{}^{\mathrm{o}}\bm{\omega}_{\mathrm{j}}-{}^{\mathrm{o}}\bm{\omega}_{j-}}{\varDelta t}
+\end{align*}
+
+
+浮遊関節の場合は，
+並進変位については単純な加算を用いることができ，
+姿勢変化は球面関節に準じる．
+すなわち，関節変位$\bm{q}_{-}$に
+増分$\varDelta\bm{q}=[\varDelta\bm{q}_{\mathrm{L}}^{\mathrm{T}}~~\varDelta\bm{q}_{\mathrm{A}}^{\mathrm{T}}]^{\mathrm{T}}$が
+与えられた後の関節変位$\bm{q}_{+}$は
+\begin{align*}
+\bm{q}_{+}
+=\left[\begin{array}{@{\,}c@{\,}}
+ \bm{q}_{\mathrm{L}+} \\ \bm{q}_{\mathrm{A}+}
+\end{array}\right]
+=\left[\begin{array}{@{\,}c@{\,}}
+ \bm{q}_{\mathrm{L}-}+\varDelta\bm{q}_{\mathrm{L}} \\
+ \bm{\xi}\left(\bm{R}_{\xi}(\varDelta\bm{q}_{\mathrm{A}})\bm{R}_{\xi}(\bm{q}_{-})\right)
+\end{array}\right]
+\end{align*}
+であり，
+関節変位が$\bm{q}_{-}$であるときに
+相対並進速度$\dot{\bm{q}}_{\mathrm{L}}$および
+相対角速度${}^{\mathrm{o}}\bm{\omega}_{\mathrm{j}}$が与えられたときの
+微小時間$\varDelta t$後の関節変位$\bm{q}_{+}$は，
+\begin{align*}
+\bm{q}_{+}
+\simeq\left[\begin{array}{@{\,}c@{\,}}
+ \bm{q}_{\mathrm{L}-}+\dot{\bm{q}}_{\mathrm{L}}\varDelta t \\
+ \bm{\xi}\left(\bm{R}_{\xi}({}^{\mathrm{o}}\bm{\omega}_{\mathrm{j}}\varDelta t)\bm{R}_{\xi}(\bm{q}_{-})\right)
+\end{array}\right]
+\end{align*}
+のように近似できる．
+また，微小時間$\varDelta t$の間に
+関節変位が$\bm{q}_{-}=[\bm{q}_{\mathrm{L}-}^{\mathrm{T}}~~\bm{q}_{\mathrm{A}-}^{\mathrm{T}}]^{\mathrm{T}}$から
+$\bm{q}_{+}=[\bm{q}_{\mathrm{L}+}^{\mathrm{T}}~~\bm{q}_{\mathrm{A}+}^{\mathrm{T}}]^{\mathrm{T}}$へと変化したときの
+関節速度および関節加速度はそれぞれ
+\begin{align*}
+&\dot{\bm{q}}_{\mathrm{L}}\simeq\frac{\bm{q}_{\mathrm{L}+}-\bm{q}_{\mathrm{L}-}}{\varDelta t},\quad
+\ddot{\bm{q}}_{\mathrm{L}}\simeq\frac{\dot{\bm{q}}_{\mathrm{L}}-\dot{\bm{q}}_{\mathrm{L}-}}{\varDelta t}
+\\
+&
+{}^{\mathrm{o}}\bm{\omega}_{\mathrm{j}}\simeq
+\frac{\bm{\xi}\left(\bm{R}_{\xi}(\bm{q}_{+})\bm{R}_{\xi}(\bm{q}_{-})^{\mathrm{T}}\right)}
+     {\varDelta t},\quad
+{}^{\mathrm{o}}\dot{\bm{\omega}}_{\mathrm{j}}\simeq
+\frac{{}^{\mathrm{o}}\bm{\omega}_{\mathrm{j}}-{}^{\mathrm{o}}\bm{\omega}_{j-}}{\varDelta t}
+\end{align*}
+と近似できる．
+
+
+
+\section{拘束の歪みを考慮した関節モデル}
+
+\begin{figure}[htb]
+\begin{center}
+\includesvg[height=.15\textheight]{fig/joint_torsion.svg}
+\caption{拘束に歪みが生じ得る関節の運動}
+\label{fig:joint_torsion}
+\end{center}
+\end{figure}
+
+ここまで，
+関節変位$\bm{q}$が与えられた時に，
+ある方向の運動が理想的に拘束されながら
+リンク座標系が$\Sigma_{\mathrm{o}}$から$\Sigma_{\mathrm{j}}$へと変化すると考えてきた．
+実際の関節機構においては，軸受など運動を拘束する機構は微小変形するため，
+必ずしも拘束空間への変位が発生しないわけではない．
+本節では，
+拘束の歪みが起こり得る状況で，
+座標系$\Sigma_{\mathrm{j}}$から$\Sigma_{\mathrm{o}}$への変換
+$({}^{\mathrm{o}}\bm{p}_{\mathrm{j}}, {}^{\mathrm{o}}\bm{R}_{\mathrm{j}})$が与えられたときに，
+それを関節変位$\bm{q}$と拘束の歪み
+${}^{\mathrm{o}}\bm{t}=[{}^{\mathrm{o}}\bm{t}_{\mathrm{L}}^{\mathrm{T}}~~{}^{\mathrm{o}}\bm{t}_{\mathrm{A}}^{\mathrm{T}}]^{\mathrm{T}}$に
+分離することを考え，関節の種類ごとに具体的に求める．
+ただし
+${}^{\mathrm{o}}\bm{t}_{\mathrm{L}}\in\mathbb{R}^{3}$は並進歪み，
+${}^{\mathrm{o}}\bm{t}_{\mathrm{A}}\in\mathbb{R}^{3}$は角軸表現された回転歪みであり，
+Fig. \ref{fig:joint_torsion}に示すように，
+歪みが先に起こり，その後関節変位が起こるものと仮定する．
+後の便宜のために，これらを$\Sigma_{\mathrm{j}}$で表した
+${}^{\mathrm{j}}\bm{t}_{\mathrm{L}}(={}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\bm{t}_{\mathrm{L}})$，
+${}^{\mathrm{j}}\bm{t}_{\mathrm{A}}(={}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\bm{t}_{\mathrm{A}})$
+として求めることにする．
+
+関節における座標変換は，
+関節変位と拘束の歪みに完全に分離されなければならない．
+すなわち，$({}^{\mathrm{o}}\bm{p}_{\mathrm{j}}, {}^{\mathrm{o}}\bm{R}_{\mathrm{j}})$に対応する
+$\bm{q}$と
+${}^{\mathrm{j}}\bm{t}=[{}^{\mathrm{j}}\bm{t}_{\mathrm{L}}^{\mathrm{T}}~~{}^{\mathrm{j}}\bm{t}_{\mathrm{A}}^{\mathrm{T}}]^{\mathrm{T}}$
+の組が必ず存在し，かつ${}^{\mathrm{j}}\bm{t}$は${}^{\mathrm{j}}\bm{H}_{\mathrm{Cj}}$の張る空間の元となる，
+すなわち${}^{\mathrm{j}}\bm{t}^{\mathrm{T}}{}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}\equiv\bm{O}$が言える．
+このことも併せて示す．
+
+
+なお，
+$({}^{\mathrm{p}}\bm{p}_{\mathrm{j}}, {}^{\mathrm{p}}\bm{R}_{\mathrm{j}})$が与えられたときには，
+\begin{align*}
+{}^{\mathrm{p}}\bm{p}_{\mathrm{j}}={}^{\mathrm{p}}\bm{p}_{\mathrm{o}}+{}^{\mathrm{p}}\bm{R}_{\mathrm{o}}{}^{\mathrm{o}}\bm{p}_{\mathrm{j}}
+\quad\mbox{かつ}\quad
+{}^{\mathrm{p}}\bm{R}_{\mathrm{j}}={}^{\mathrm{p}}\bm{R}_{\mathrm{o}}{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}
+\quad\Leftrightarrow\quad
+{}^{\mathrm{o}}\bm{p}_{\mathrm{j}}={}^{\mathrm{p}}\bm{R}_{\mathrm{o}}^{\mathrm{T}}({}^{\mathrm{p}}\bm{p}_{\mathrm{j}}-{}^{\mathrm{p}}\bm{p}_{\mathrm{o}})
+\quad\mbox{かつ}\quad
+{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}={}^{\mathrm{p}}\bm{R}_{\mathrm{o}}^{\mathrm{T}}{}^{\mathrm{p}}\bm{R}_{\mathrm{j}}
+\end{align*}
+である．
+
+
+\vspace{\baselineskip}
+
+
+\noindent{\bf 固定関節}
+
+固定関節では関節変位が起こらないので，
+座標系の変化は全て拘束の歪みによるものである．
+すなわち，
+\begin{align*}
+{}^{\mathrm{j}}\bm{t}_{\mathrm{L}}={}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\bm{p}_{\mathrm{j}},\quad
+{}^{\mathrm{j}}\bm{t}_{\mathrm{A}}={}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\bm{\xi}_{\mathrm{j}}
+\end{align*}
+${}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}\equiv\bm{O}$なので，
+${}^{\mathrm{j}}\bm{t}^{\mathrm{T}}{}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}\equiv\bm{O}$は明らか．
+
+\vspace{\baselineskip}
+
+\noindent{\bf 回転関節}
+
+理想的な回転関節では，
+$\Sigma_{\mathrm{o}}$と$\Sigma_{\mathrm{j}}$の原点および$z$軸が常に一致する．
+つまり，これらのずれが拘束の歪みによるものである．
+並進歪みは
+\begin{align*}
+{}^{\mathrm{j}}\bm{t}_{\mathrm{L}}={}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\bm{p}_{\mathrm{j}}
+\end{align*}
+である．
+また回転歪みによって$\hat{\bm{z}}$が
+${}^{\mathrm{o}}\hat{\bm{z}}_{\mathrm{j}}={}^{\mathrm{o}}\bm{R}_{\mathrm{j}}\hat{\bm{z}}$に変位したと考える．
+このような変位を生じさせる回転は無数に存在するが，
+回転角が最小となるものは，
+$\hat{\bm{z}}$と${}^{\mathrm{o}}\hat{\bm{z}}_{\mathrm{j}}$の共通垂線を回転軸とするもので，
+次式によって求まる．
+\begin{align*}
+{}^{\mathrm{o}}\bm{t}_{\mathrm{A}}
+=\mathrm{atan2}(\|\hat{\bm{z}}\times{}^{\mathrm{o}}\hat{\bm{z}}_{\mathrm{j}}\|,\hat{\bm{z}}^{\mathrm{T}}{}^{\mathrm{o}}\hat{\bm{z}}_{\mathrm{j}})
+\frac{\hat{\bm{z}}\times{}^{\mathrm{o}}\hat{\bm{z}}_{\mathrm{j}}}{\|\hat{\bm{z}}\times{}^{\mathrm{o}}\hat{\bm{z}}_{\mathrm{j}}\|}
+\quad\Leftrightarrow\quad
+{}^{\mathrm{j}}\bm{t}_{\mathrm{A}}
+={}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\bm{t}_{\mathrm{A}}
+=\mathrm{atan2}(\|{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}\hat{\bm{z}}\times\hat{\bm{z}}\|,\hat{\bm{z}}^{\mathrm{T}}{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}\hat{\bm{z}})
+\frac{{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}\hat{\bm{z}}\times\hat{\bm{z}}}
+{\|{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}\hat{\bm{z}}\times\hat{\bm{z}}\|}
+\end{align*}
+よって明らかに${}^{\mathrm{j}}\bm{t}_{\mathrm{A}}^{\mathrm{T}}\hat{\bm{z}}$，
+すなわち
+${}^{\mathrm{j}}\bm{t}^{\mathrm{T}}{}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}\equiv\bm{O}$も明らかである．
+
+
+関節変位が起こる前の，歪みのみによる中間姿勢を
+${}^{\mathrm{o}}\bm{R}_{o^{\prime}}=\bm{R}_{\xi}({}^{\mathrm{o}}\bm{t}_{\mathrm{A}})$とおくと，
+${}^{\mathrm{o}}\bm{R}_{o^{\prime}}$の$x$軸と${}^{\mathrm{o}}\bm{R}_{\mathrm{j}}$の$x$軸，
+${}^{\mathrm{o}}\bm{R}_{o^{\prime}}$の$y$軸と${}^{\mathrm{o}}\bm{R}_{\mathrm{j}}$の$y$軸のなす角は
+どちらも等しく，これが関節変位$q$になると考えられる．
+数値誤差を考えて両者の平均，すなわち
+\begin{align*}
+q=\frac{
+ \mathrm{atan2}(\|{}^{\mathrm{o}}\hat{\bm{x}}_{o^{\prime}}\times{}^{\mathrm{o}}\hat{\bm{x}}_{\mathrm{j}}\|,
+        {}^{\mathrm{o}}\hat{\bm{x}}_{o^{\prime}}^{\mathrm{T}}{}^{\mathrm{o}}\hat{\bm{x}}_{\mathrm{j}})
++\mathrm{atan2}(\|{}^{\mathrm{o}}\hat{\bm{y}}_{o^{\prime}}\times{}^{\mathrm{o}}\hat{\bm{y}}_{\mathrm{j}}\|,
+        {}^{\mathrm{o}}\hat{\bm{y}}_{o^{\prime}}^{\mathrm{T}}{}^{\mathrm{o}}\hat{\bm{y}}_{\mathrm{j}})
+ }{2}
+\end{align*}
+とすれば良い．
+
+
+\vspace{\baselineskip}
+
+\noindent{\bf 直動関節}
+
+理想的な直動関節では，
+$\Sigma_{\mathrm{o}}$と$\Sigma_{\mathrm{j}}$の姿勢および$z$軸が常に一致する．
+つまり，これらのずれが拘束の歪みによるものである．
+並進のずれのうち，
+${}^{\mathrm{o}}\hat{\bm{z}}_{\mathrm{j}}$に沿った変位が関節変位によるものであるから，
+\begin{align*}
+q={}^{\mathrm{o}}\bm{p}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\hat{\bm{z}}_{\mathrm{j}}
+\end{align*}
+であり，並進歪みは全体のずれからこれを差し引いた
+\begin{align*}
+{}^{\mathrm{j}}\bm{t}_{\mathrm{L}}
+={}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}({}^{\mathrm{o}}\bm{p}_{\mathrm{j}}-q\,{}^{\mathrm{o}}\hat{\bm{z}}_{\mathrm{j}})
+={}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\bm{p}_{\mathrm{j}}-q\,\hat{\bm{z}}
+\end{align*}
+となる．
+一方，回転歪みは
+\begin{align*}
+{}^{\mathrm{j}}\bm{t}_{\mathrm{A}}={}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\bm{\xi}_{\mathrm{j}}
+\end{align*}
+である．
+このとき
+\begin{align*}
+\hat{\bm{z}}^{\mathrm{T}}{}^{\mathrm{j}}\bm{t}_{\mathrm{L}}
+=\hat{\bm{z}}^{\mathrm{T}}({}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\bm{p}_{\mathrm{j}}-q\,\hat{\bm{z}})
+=\hat{\bm{z}}^{\mathrm{T}}{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\bm{p}_{\mathrm{j}}-q
+=0
+\end{align*}
+より，
+${}^{\mathrm{j}}\bm{t}^{\mathrm{T}}{}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}\equiv\bm{O}$が言える．
+
+
+
+\vspace{\baselineskip}
+
+\noindent{\bf 円筒関節}
+
+円筒関節は，回転関節と直動関節の複合であるから，
+\begin{align*}
+{}^{0}\bm{t}_{\mathrm{A}}
+&=\mathrm{atan2}(\|\hat{\bm{z}}\times{}^{\mathrm{o}}\hat{\bm{z}}_{\mathrm{j}}\|,\hat{\bm{z}}^{\mathrm{T}}{}^{\mathrm{o}}\hat{\bm{z}}_{\mathrm{j}})
+\frac{\hat{\bm{z}}\times{}^{\mathrm{o}}\hat{\bm{z}}_{\mathrm{j}}}{\|\hat{\bm{z}}\times{}^{\mathrm{o}}\hat{\bm{z}}_{\mathrm{j}}\|}
+\quad\Leftrightarrow\quad
+{}^{\mathrm{j}}\bm{t}_{\mathrm{A}}
+=\mathrm{atan2}(\|{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}\hat{\bm{z}}\times\hat{\bm{z}}\|,\hat{\bm{z}}^{\mathrm{T}}{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}\hat{\bm{z}})
+\frac{{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}\hat{\bm{z}}\times\hat{\bm{z}}}
+     {\|{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}\hat{\bm{z}}\times\hat{\bm{z}}\|}
+\\
+{}^{\mathrm{o}}\bm{R}_{o^{\prime}}&=\bm{R}_{\xi}({}^{\mathrm{o}}\bm{t}_{\mathrm{A}})
+\\
+q_{1}&={}^{\mathrm{o}}\bm{p}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\hat{\bm{z}}_{\mathrm{j}}
+\\
+q_{2}&=\frac{
+ \mathrm{atan2}(\|{}^{\mathrm{o}}\hat{\bm{x}}_{o^{\prime}}\times{}^{\mathrm{o}}\hat{\bm{x}}_{\mathrm{j}}\|,
+        {}^{\mathrm{o}}\hat{\bm{x}}_{o^{\prime}}^{\mathrm{T}}{}^{\mathrm{o}}\hat{\bm{x}}_{\mathrm{j}})
++\mathrm{atan2}(\|{}^{\mathrm{o}}\hat{\bm{y}}_{o^{\prime}}\times{}^{\mathrm{o}}\hat{\bm{y}}_{\mathrm{j}}\|,
+        {}^{\mathrm{o}}\hat{\bm{y}}_{o^{\prime}}^{\mathrm{T}}{}^{\mathrm{o}}\hat{\bm{y}}_{\mathrm{j}})
+ }{2}
+\\
+{}^{\mathrm{o}}\bm{t}_{\mathrm{L}}&={}^{\mathrm{o}}\bm{p}_{\mathrm{j}}-q_{1}\,{}^{\mathrm{o}}\hat{\bm{z}}_{\mathrm{j}}
+\quad\Leftrightarrow\quad
+{}^{\mathrm{j}}\bm{t}_{\mathrm{L}}={}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\bm{p}_{\mathrm{j}}-q_{1}\,\hat{\bm{z}}
+\end{align*}
+によって関節変位と歪みが求まる．
+回転関節および直動関節と同様に
+$\hat{\bm{z}}^{\mathrm{T}}{}^{\mathrm{j}}\bm{t}_{\mathrm{A}}=0$かつ
+$\hat{\bm{z}}^{\mathrm{T}}{}^{\mathrm{j}}\bm{t}_{\mathrm{L}}=0$なので，
+${}^{\mathrm{j}}\bm{t}^{\mathrm{T}}{}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}\equiv\bm{O}$が言える．
+
+
+
+\vspace{\baselineskip}
+
+\noindent{\bf 自在継手}
+
+理想的な自在継手では，
+$\Sigma_{\mathrm{o}}$と$\Sigma_{\mathrm{j}}$の原点が常に一致するので，
+並進歪みは
+\begin{align*}
+{}^{\mathrm{j}}\bm{t}_{\mathrm{L}}={}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\bm{p}_{\mathrm{j}}
+\end{align*}
+である．
+関節変位による姿勢変化はまず$z$軸回り，次いで$y$軸回りに起こるから，
+これらより先に$x$軸回りの回転歪み${}^{\mathrm{o}}\bm{t}_{\mathrm{A}}=\theta_{t}\hat{\bm{x}}$が
+生じると考えれば良い．
+すなわち回転歪みによる姿勢変化を
+\begin{align*}
+{}^{\mathrm{o}}\bm{R}_{o^{\prime}}=\bm{R}(\theta_{t};\hat{\bm{x}})
+=\left[\begin{array}{@{\,}ccc@{\,}}
+ 1 & 0     & 0 \\
+ 0 & C_{t} &-S_{t} \\
+ 0 & S_{t} & C_{t} \\
+\end{array}\right]
+\end{align*}
+とおくと，
+\begin{align*}
+{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}
+=\left[\begin{array}{@{\,}ccc@{\,}}
+ 1 & 0     & 0 \\
+ 0 & C_{t} &-S_{t} \\
+ 0 & S_{t} & C_{t} \\
+\end{array}\right]\left[\begin{array}{@{\,}ccc@{\,}}
+ C_{1}C_{2} &-S_{1} & C_{1}S_{2} \\
+ S_{1}C_{2} & C_{1} & S_{1}S_{2} \\
+     -S_{2} & 0     &      C_{2} \\
+\end{array}\right]=\left[\begin{array}{@{\,}ccc@{\,}}
+ C_{1}C_{2} &-S_{1} & C_{1}S_{2} \\
+ C_{t}S_{1}C_{2}+S_{t}S_{2} & C_{t}C_{1} & C_{t}S_{1}S_{2}-S_{t}C_{2} \\
+ S_{t}S_{1}C_{2}-C_{t}S_{2} & S_{t}C_{1} & S_{t}S_{1}S_{2}+C_{t}C_{2} \\
+\end{array}\right]
+\end{align*}
+であるから，
+\begin{align*}
+{}^{0}\bm{t}_{\mathrm{A}}&=\mathrm{atan2}(r_{32},r_{22})\hat{\bm{x}} \\
+q_{1}&=\mathrm{atan2}(-r_{12},C_{t}r_{22}+S_{t}r_{32}) \\
+q_{2}&=\mathrm{atan2}(C_{1}r_{13},C_{1}r_{11})
+\end{align*}
+と求まる．
+ただしこれは$r_{32}\neq 0$かつ$r_{22}\neq 0$の場合である．
+$r_{32}=r_{22}=0$のとき，
+歪みによる回転と2軸目関節の回転とを区別できなくなるが，
+その場合は，座標系のずれは歪みではなく関節変位のみによるものと仮定すれば，
+\begin{align*}
+{}^{0}\bm{t}_{\mathrm{A}}&=0 \\
+q_{1}&=\mathrm{atan2}(-r_{12},0) \\
+q_{2}&=\mathrm{atan2}(-r_{31},r_{33})
+\end{align*}
+となる．
+
+※${}^{\mathrm{j}}\bm{t}^{\mathrm{T}}{}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}\equiv\bm{O}$については保留．
+どうも間違いがある模様．
+
+
+\vspace{\baselineskip}
+
+\noindent{\bf 球面関節}
+
+歪みは並進のみ起こると考えれば良い．
+すなわち，
+\begin{align*}
+{}^{\mathrm{j}}\bm{t}_{\mathrm{L}}={}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\bm{p}_{\mathrm{j}},\quad
+{}^{\mathrm{j}}\bm{t}_{\mathrm{A}}\equiv\bm{0},\quad
+\bm{q}={}^{\mathrm{o}}\bm{\xi}_{\mathrm{j}}
+\end{align*}
+${}^{\mathrm{j}}\bm{t}^{\mathrm{T}}{}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}\equiv\bm{O}$は明らか．
+
+
+\vspace{\baselineskip}
+
+\noindent{\bf 平面関節}
+
+円筒関節と同様に考えれば，
+\begin{align*}
+q_{1}&={}^{\mathrm{o}}\bm{p}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\hat{\bm{x}}_{\mathrm{j}}
+\\
+q_{2}&={}^{\mathrm{o}}\bm{p}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\hat{\bm{y}}_{\mathrm{j}}
+\\
+{}^{\mathrm{o}}\bm{t}_{\mathrm{L}}&={}^{\mathrm{o}}\bm{p}_{\mathrm{j}}
+-q_{1}\,{}^{\mathrm{o}}\hat{\bm{x}}_{\mathrm{j}}
+-q_{2}\,{}^{\mathrm{o}}\hat{\bm{y}}_{\mathrm{j}}
+=
+({}^{\mathrm{o}}\bm{p}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\hat{\bm{z}}_{\mathrm{j}})
+{}^{\mathrm{o}}\hat{\bm{z}}_{\mathrm{j}}
+\quad\Leftrightarrow\quad
+{}^{\mathrm{j}}\bm{t}_{\mathrm{L}}
+={}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\bm{p}_{\mathrm{j}}
+-q_{1}\,\hat{\bm{x}}
+-q_{2}\,\hat{\bm{y}}
+=
+({}^{\mathrm{o}}\bm{p}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\hat{\bm{z}}_{\mathrm{j}})
+\hat{\bm{z}}
+\\
+{}^{0}\bm{t}_{\mathrm{A}}
+&=\mathrm{atan2}(\|\hat{\bm{z}}\times{}^{\mathrm{o}}\hat{\bm{z}}_{\mathrm{j}}\|,\hat{\bm{z}}^{\mathrm{T}}{}^{\mathrm{o}}\hat{\bm{z}}_{\mathrm{j}})
+\frac{\hat{\bm{z}}\times{}^{\mathrm{o}}\hat{\bm{z}}_{\mathrm{j}}}{\|\hat{\bm{z}}\times{}^{\mathrm{o}}\hat{\bm{z}}_{\mathrm{j}}\|}
+\quad\Leftrightarrow\quad
+{}^{\mathrm{j}}\bm{t}_{\mathrm{A}}
+=\mathrm{atan2}(\|{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}\hat{\bm{z}}\times\hat{\bm{z}}\|,\hat{\bm{z}}^{\mathrm{T}}{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}\hat{\bm{z}})
+\frac{{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}\hat{\bm{z}}\times\hat{\bm{z}}}
+     {\|{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}\hat{\bm{z}}\times\hat{\bm{z}}\|}
+\\
+{}^{\mathrm{o}}\bm{R}_{o^{\prime}}&=\bm{R}_{\xi}({}^{\mathrm{o}}\bm{t}_{\mathrm{A}})
+\\
+q_{3}&=\frac{
+ \mathrm{atan2}(\|{}^{\mathrm{o}}\hat{\bm{x}}_{o^{\prime}}\times{}^{\mathrm{o}}\hat{\bm{x}}_{\mathrm{j}}\|,
+        {}^{\mathrm{o}}\hat{\bm{x}}_{o^{\prime}}^{\mathrm{T}}{}^{\mathrm{o}}\hat{\bm{x}}_{\mathrm{j}})
++\mathrm{atan2}(\|{}^{\mathrm{o}}\hat{\bm{y}}_{o^{\prime}}\times{}^{\mathrm{o}}\hat{\bm{y}}_{\mathrm{j}}\|,
+        {}^{\mathrm{o}}\hat{\bm{y}}_{o^{\prime}}^{\mathrm{T}}{}^{\mathrm{o}}\hat{\bm{y}}_{\mathrm{j}})
+ }{2}
+\end{align*}
+によって関節変位と歪みが求まる．
+${}^{\mathrm{j}}\bm{t}^{\mathrm{T}}{}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}\equiv\bm{O}$も円筒関節と同様に考えれば明らか．
+
+
+
+\vspace{\baselineskip}
+
+\noindent{\bf 浮遊関節}
+
+歪みは起こらないと考えれば良い．
+すなわち，
+\begin{align*}
+{}^{\mathrm{j}}\bm{t}_{\mathrm{L}}\equiv\bm{0},\quad
+{}^{\mathrm{j}}\bm{t}_{\mathrm{A}}\equiv\bm{0},\quad
+\bm{q}=[{}^{\mathrm{o}}\bm{p}_{\mathrm{j}}^{\mathrm{T}}~~{}^{\mathrm{o}}\bm{\xi}_{\mathrm{j}}^{\mathrm{T}}]^{\mathrm{T}}
+\end{align*}
+${}^{\mathrm{j}}\bm{t}^{\mathrm{T}}{}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}\equiv\bm{O}$は明らか．
+
+
+\end{document}
+

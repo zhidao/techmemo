@@ -1,0 +1,83 @@
+﻿\documentclass[a4paper]{jsarticle}
+\usepackage[dvips]{graphicx}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{ascmac}
+\usepackage{algorithm,algpseudocode}
+\usepackage{svg}
+\usepackage{url}
+
+\flushbottom
+\sloppy
+
+\setlength{\paperwidth}{210mm}
+\setlength{\paperheight}{297mm}
+\setlength{\voffset}{0mm}
+\setlength{\hoffset}{0mm}
+\setlength{\textwidth}{\paperwidth}
+\addtolength{\textwidth}{-30mm}
+\setlength{\textheight}{\paperheight}
+\addtolength{\textheight}{-60mm}
+\setlength{\topmargin}{-1in}
+\addtolength{\topmargin}{20mm}
+\setlength{\headheight}{0mm}
+\setlength{\headsep}{0mm}
+\setlength{\footskip}{10mm}
+\setlength{\oddsidemargin}{-1in}
+\addtolength{\oddsidemargin}{15mm}
+\setlength{\columnsep}{7mm}
+
+\title{\bf FFT整理}
+\author{\Large{\bf 杉原 知道}}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-\baselineskip}
+
+\section{おさらい}
+
+\section{周期関数のフーリエ級数展開}
+
+フーリエ変換の出発点となるのは，「任意の周期関数は調和関数の無限級数で表せる」という命題です．
+すなわち，ある関数$f(t)$が周期的境界条件
+\begin{align*}
+f(t+T)=f(t)\qquad\mbox{for}\quad\forall t\in\mathbb{R},\quad\exist T\in\mathbb{R}
+\end{align*}
+を満たすとき，次式を満たす数列$\left\{(a_{k},b_{k})\right\}$が存在します．
+\begin{align*}
+f(t)\equiv\sum_{k=0}^{\infty}\left(a_{k}\cos\frac{2\pi kt}{T} + b_{k}\sin\frac{2\pi kt}{T)\right)
+\end{align*}
+これが真であるとして，$\left\{(a_{k},b_{k})\right\}$はどうすれば求まるか？が最初に考える問題です．
+
+天下り的ですが，
+\begin{align*}
+\cos\frac{2\pi jt}{T}\cos\frac{2\pi kt}{T}
+\end{align*}
+
+
+
+
+
+
+「任意の関数$f(t)$は，正弦関数，余弦関数の重ね合わせで表せる」というのが，フーリエ変換の大前提となる命題です．
+\begin{align*}
+f(t)\equiv\int_{-\infty}^{\infty}\left\{a(\omega)\cos\omega t+b(\omega)\sin\omega t\right\}\mathrm{d}\omega
+\end{align*}
+ただし，$a(\omega)$，$b(\omega)$は$\omega$のみに依存する実定数です．
+
+まず，$f(t)$が既知であるときに$a(\omega)$，$b(\omega)$を求めることを考えましょう．
+天下り的ですが，$f(t)$に$\cos\omega t$および$\sin\omega t$をそれぞれ乗じると，次のようになります．
+\begin{align*}
+\cos\omega t f(t)
+=\int_{-\infty}^{\infty}\left\{a(\omega)\cos^{2}\omega t+b(\omega)\sin\omega t\cos\omega t\right\}\mathrm{d}\omega
+\\
+=\int_{-\infty}^{\infty}a(\omega)\cos^{2}\omega t\mathrm{d}\omega
++\int_{-\infty}^{\infty}b(\omega)\sin\omega t\cos\omega t \mathrm{d}\omega
+\end{align*}
+
+
+
+
+
+
+\end{document}

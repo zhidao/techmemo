@@ -1,0 +1,269 @@
+﻿\documentclass[a4paper]{jsarticle}
+\usepackage[dvips]{graphicx}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{ascmac}
+\usepackage{algorithm,algpseudocode}
+\usepackage{svg}
+\usepackage{url}
+
+\flushbottom
+\sloppy
+
+\setlength{\paperwidth}{210mm}
+\setlength{\paperheight}{297mm}
+\setlength{\voffset}{0mm}
+\setlength{\hoffset}{0mm}
+\setlength{\textwidth}{\paperwidth}
+\addtolength{\textwidth}{-30mm}
+\setlength{\textheight}{\paperheight}
+\addtolength{\textheight}{-60mm}
+\setlength{\topmargin}{-1in}
+\addtolength{\topmargin}{20mm}
+\setlength{\headheight}{0mm}
+\setlength{\headsep}{0mm}
+\setlength{\footskip}{10mm}
+\setlength{\oddsidemargin}{-1in}
+\addtolength{\oddsidemargin}{15mm}
+\setlength{\columnsep}{7mm}
+
+\title{\bf 分解能可変octreeに法線推定機能を加えてみた}
+\author{\Large{\bf 杉原 知道}}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-\baselineskip}
+
+\section{はじめに}
+
+「分解能可変octreeを作ったよ」の続編です．
+環境の地図を動的に作成する上では，形状の特徴をコンパクトに表現することが大切です．
+別記事「3次元点群の法線ベクトル推定をフルスクラッチで作ってみた」にも書いたように，
+点群からの局所的に推定される曲面の法線ベクトルを推定することは，これに必要な基本計算の一つです．
+
+点群はオンライン計測によって動的に獲得されますし，
+それを管理するoctree表現の空間分解能を上げたり下げたりする過程で，グルーピングも動的に変わります．
+法線ベクトル推定もそれに合わせて動的にやりたいと思います．
+これはつまり，点群の分散共分散行列を逐次計算したいということです．
+
+
+\section{octantへの点追加操作の修正}
+
+点群のグループ分けは
+octreeの空間分割単位（octant）と紐付いているので，
+その中に分散共分散行列も持たせることにします．
+\begin{screen}
+\begin{verbatim}
+typedef struct{
+  zVec3DOctant *suboctant[8];
+  zAABox3D region;
+  zVec3DList points;
+  zMat3D cov; /* これが分散共分散行列 */
+  zVec3D norm; /* 法線ベクトル */
+} zVec3DOctant;
+\end{verbatim}
+\end{screen}
+
+実体として点を持つのは葉ノードとなるoctantだけで，それらの\verb|suboctant|は全てNULLです．
+残りのメンバ変数について，
+octant Nの領域を$\mathcal{D}_{\mathrm{N}}=\left\{(x,y,z)|x_{\mathrm{Nmin}}\leq x\leq x_{\mathrm{Nmax}},y_{\mathrm{Nmin}}\leq y\leq y_{\mathrm{Nmax}},z_{\mathrm{Nmin}}\leq z\leq z_{\mathrm{Nmax}}\right\}$，
+その中心点を$\bar{\bm{p}}_{\mathrm{N}}=\left(\frac{x_{\mathrm{Nmin}}+x_{\mathrm{Nmax}}}{2},\frac{y_{\mathrm{Nmin}}+y_{\mathrm{Nmax}}}{2},\frac{z_{\mathrm{Nmin}}+z_{\mathrm{Nmax}}}{2}\right)$，
+割り当てられた点群を$\mathcal{P}_{\mathrm{N}}=\left\{\bm{p}_{i}\right\}$（$i=1,\cdots,n_{\mathrm{N}}$），
+分散共分散行列を$\bm{V}_{\mathrm{N}}$，
+法線ベクトルを$\bm{\nu}_{\mathrm{N}}$とそれぞれおきましょう．
+$\bm{V}_{\mathrm{N}}$は，$(x_{\mathrm{MN}},y_{\mathrm{MN}},z_{\mathrm{MN}})$を中心とするものとします．
+
+ここに新たに点$\bm{p}_{n_{\mathrm{N}}+1}$が加えられるとします．
+\begin{align*}
+\bm{V}_{\mathrm{N}}=\sum_{i=1}^{n_{\mathrm{N}}}(\bm{p}_{i}-\bar{\bm{p}}_{\mathrm{N}})(\bm{p}_{i}-\bar{\bm{p}}_{\mathrm{N}})^{\mathrm{T}}
+\end{align*}
+ですから，
+\begin{align*}
+\bm{V}_{\mathrm{N}}\leftarrow\bm{V}_{\mathrm{N}}+(\bm{p}_{n_{\mathrm{N}}+1}-\bar{\bm{p}}_{\mathrm{N}})(\bm{p}_{n_{\mathrm{N}}+1}-\bar{\bm{p}}_{\mathrm{N}})^{\mathrm{T}}
+\\
+\mathcal{P}_{\mathrm{N}}\leftarrow\mathcal{P}_{\mathrm{N}}\cup\left\{\bm{p}_{n_\mathrm{N}+1}\right\}
+\end{align*}
+とすれば良いです．
+法線ベクトル$\bm{\nu}_{\mathrm{N}}$は方向の曖昧性があるので，
+$\bm{V}_{\mathrm{N}}$の最小固有値に対応する固有ベクトル$\bm{\xi}$をまず求めて，
+\begin{align*}
+\mbox{$\bm{\nu}_{\mathrm{N}}^{\mathrm{T}}\bm{\xi}\geq 0$ならば}\qquad\bm{\nu}_{\mathrm{N}}\leftarrow\bm{\xi}
+\\
+\mbox{$\bm{\nu}_{\mathrm{N}}^{\mathrm{T}}\bm{\xi}< 0$ならば}\qquad\bm{\nu}_{\mathrm{N}}\leftarrow-\bm{\xi}
+\end{align*}
+とすることにします．
+
+
+
+\begin{screen}
+\begin{verbatim}
+static zVec3DOctant *_zVec3DOctantAddPoint(zVec3DOctant *octant, const zVec3D *point, double resolution)
+{
+  zVec3D mid;
+  byte xb, yb, zb;
+  zVec3DOctant *suboctant;
+
+  if( _zVec3DOctantIsSmallest( octant, resolution ) )
+    return zVec3DListAdd( &octant->points, point ) ? octant : NULL;
+  zAABox3DCenter( &octant->region, &mid );
+  xb = point->c.x > mid.c.x ? 1 : 0;
+  yb = point->c.y > mid.c.y ? 1 : 0;
+  zb = point->c.z > mid.c.z ? 1 : 0;
+  if( !( suboctant = _zVec3DOctantAllocSuboctant( octant, xb, yb, zb, &mid ) ) ) return NULL;
+  return _zVec3DOctantAddPoint( suboctant, point, resolution );
+}
+\end{verbatim}
+\end{screen}
+
+
+
+\section{octantの分割と統合}
+
+
+octant Nを分割する際には，
+それぞれのsuboctantに新たに割り当てられた点群から分散共分散行列を法線ベクトルを計算し直す必要があります．
+
+一方，octant N1とN2を統合してNとする際には，
+\begin{align*}
+\mathcal{P}_{\mathrm{N}}=\mathcal{P}_{\mathrm{N}1}\cup\mathcal{P}_{\mathrm{N}2}
+\\
+\bm{V}_{\mathrm{N}}=\bm{V}_{\mathrm{N}1}+\bm{V}_{\mathrm{N}2}
+\end{align*}
+とすれば良いです．
+法線ベクトル$\bm{\nu}_{\mathrm{N}}$は，
+$\bm{V}_{\mathrm{N}}$の最小固有値に対応する固有ベクトル$\bm{\xi}$をまず求めて，
+\begin{align*}
+\tilde{\bm{\nu}}_{\mathrm{N}}=\frac{\bm{\nu}_{\mathrm{N}1}+\bm{\nu}_{\mathrm{N}2}}{2}
+\\
+\mbox{$\tilde{\bm{\nu}}_{\mathrm{N}}^{\mathrm{T}}\bm{\xi}\geq 0$ならば}\qquad\bm{\nu}_{\mathrm{N}}\leftarrow\bm{\xi}
+\\
+\mbox{$\tilde{\bm{\nu}}_{\mathrm{N}}^{\mathrm{T}}\bm{\xi}< 0$ならば}\qquad\bm{\nu}_{\mathrm{N}}\leftarrow-\bm{\xi}
+\end{align*}
+とします．
+
+
+
+
+
+
+
+
+分解能を動的可変にするために，octantを分割/統合する処理が必要です．分割は次の関数で行います．
+\begin{screen}
+\begin{verbatim}
+static bool _zVec3DOctantDivide(zVec3DOctant *octant, double resolution)
+{
+  zVec3DListCell *cp;
+  zVec3D mid;
+  byte xb, yb, zb, i;
+  zVec3DOctant *suboctant;
+
+  if( !octant ) return true;
+  if( _zVec3DOctantIsSmallest( octant, resolution ) ) return true;
+  zAABox3DCenter( &octant->region, &mid );
+  while( !zListIsEmpty( &octant->points ) ){
+    zListDeleteHead( &octant->points, &cp );
+    xb = cp->data.c.x > mid.c.x ? 1 : 0;
+    yb = cp->data.c.y > mid.c.y ? 1 : 0;
+    zb = cp->data.c.z > mid.c.z ? 1 : 0;
+    if( !( suboctant = _zVec3DOctantAllocSuboctant( octant, xb, yb, zb, &mid ) ) ) return false;
+    zListInsertHead( &suboctant->points, cp );
+  }
+  for( i=0; i<8; i++ )
+    if( !_zVec3DOctantDivide( octant->suboctant[i], resolution ) ) return false;
+  return true;
+}
+\end{verbatim}
+\end{screen}
+
+リストに登録されている点を一つずつ参照しながら，その点が属する領域のsuboctantに移譲していきます．該当するsuboctantが無ければ新たに生成します．ここの仕組みは\verb|_zVec3DOctantAddPoint()|と同じですが，さらにsuboctantを再帰的に分割していく処理が加わっています．
+
+逆にoctantを統合する関数は，次のものです．
+\begin{screen}
+\begin{verbatim}
+static void _zVec3DOctantMerge(zVec3DOctant *octant, double resolution)
+{
+  int i;
+
+  if( !octant ) return;
+  for( i=0; i<8; i++ )
+    _zVec3DOctantMerge( octant->suboctant[i], resolution );
+  if( _zVec3DOctantIsSmallest( octant, resolution ) )
+    for( i=0; i<8; i++ )
+      if( octant->suboctant[i] ){
+        zListAppend( &octant->points, &octant->suboctant[i]->points );
+        _zVec3DOctantDestroy( octant->suboctant[i] );
+        zFree( octant->suboctant[i] );
+      }
+}
+\end{verbatim}
+\end{screen}
+
+先に再帰的にsuboctantをそれぞれ統合した後，もし今のoctantが指定の空間分解能よりも小さい大きさのものであれば，suboctantが持つ点リストをもらってまとめた上で，suboctantを全て破棄します．
+
+
+
+\section{octree操作}
+
+前節のoctant操作は全てstatic関数として定義しました．ユーザが用いるのは，\verb|zVec3DOctree|を操作する関数のみとなります．
+
+まず，次の関数でoctreeを初期化します．基本的に，カバーする全直方体領域と，空間分解能を指定しているだけです．
+\begin{screen}
+\begin{verbatim}
+zVec3DOctree *zVec3DOctreeInit(zVec3DOctree *octree, double xmin, double ymin, double zmin, double xmax, double ymax, double zmax, double resolution)
+{
+  _zVec3DOctantInit( &octree->root );
+  _zVec3DOctantSetRegion( &octree->root, xmin, ymin, zmin, xmax, ymax, zmax );
+  zVec3DOctreeSetResolution( octree, resolution );
+  return octree;
+}
+\end{verbatim}
+\end{screen}
+
+使い終わったら次の関数で破棄します．
+\begin{screen}
+\begin{verbatim}
+void zVec3DOctreeDestroy(zVec3DOctree *octree)
+{
+  _zVec3DOctantDestroy( &octree->root );
+}
+\end{verbatim}
+\end{screen}
+
+点の追加は，前述の\verb|_zVec3DOctantAddPoint()|をoctreeの\verb|root|に適用します．
+\begin{screen}
+\begin{verbatim}
+zVec3DOctant *zVec3DOctreeAddPoint(zVec3DOctree *octree, zVec3D *point)
+{
+  if( !_zVec3DOctantPointIsInside( &octree->root, point ) ){
+    ZRUNERROR( ZEO_ERR_OCTREE_POINT_OUTOFREGION );
+    return NULL;
+  }
+  return _zVec3DOctantAddPoint( &octree->root, point, octree->resolution );
+}
+\end{verbatim}
+\end{screen}
+
+
+また，分解能の変更は，今よりも小さくするならば\verb|_zVec3DOctantDivide()|を，大きくするならば\verb|_zVec3DOctantMerge()|を\verb|root|に適用すれば良いです．
+\begin{screen}
+\begin{verbatim}
+bool zVec3DOctreeChangeResolution(zVec3DOctree *octree, double resolution)
+{
+  if( resolution < octree->resolution ){
+    zVec3DOctreeSetResolution( octree, resolution );
+    return _zVec3DOctantDivide( &octree->root, octree->resolution );
+  }
+  zVec3DOctreeSetResolution( octree, resolution );
+  _zVec3DOctantMerge( &octree->root, octree->resolution );
+  return true;
+}
+\end{verbatim}
+\end{screen}
+
+上記の機能を実際に使って，点群の追加と分解能の変更を行ってみました．点群はstanford bunnyから取ったものです．
+
+
+
+
+\end{document}

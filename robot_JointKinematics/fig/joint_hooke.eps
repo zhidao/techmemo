@@ -1,0 +1,676 @@
+%!PS-Adobe-3.0 EPSF-3.0
+%%BoundingBox: 32 637 246 769
+%%Title: joint_hooke
+%%CreationDate: Tue Aug 11 20:08:08 2009
+%%Creator: Tgif-4.1.45-QPL written by William Chia-Wei Cheng (bill.cheng@acm.org)
+%%ProducedBy: (unknown)
+%%Pages: 1
+%%DocumentFonts: (atend)
+%%EndComments
+%%BeginProlog
+
+/tgifdict 56 dict def
+tgifdict begin
+
+/tgifarrowtipdict 8 dict def
+tgifarrowtipdict /mtrx matrix put
+
+/TGAT % tgifarrowtip
+ { tgifarrowtipdict begin
+      /dy exch def
+      /dx exch def
+      /h exch def
+      /w exch def
+      /y exch def
+      /x exch def
+      /savematrix mtrx currentmatrix def
+      x y translate
+      dy dx atan rotate
+      0 0 moveto
+      w neg h lineto
+      w neg h neg lineto
+      savematrix setmatrix
+   end
+ } def
+
+/tgifarcdict 8 dict def
+tgifarcdict /mtrx matrix put
+
+/TGAN % tgifarcn
+ { tgifarcdict begin
+      /endangle exch def
+      /startangle exch def
+      /yrad exch def
+      /xrad exch def
+      /y exch def
+      /x exch def
+      /savematrix mtrx currentmatrix def
+      x y translate
+      xrad yrad scale
+      0 0 1 startangle endangle arc
+      savematrix setmatrix
+   end
+ } def
+
+/TGAR % tgifarc
+ { tgifarcdict begin
+      /endangle exch def
+      /startangle exch def
+      /yrad exch def
+      /xrad exch def
+      /y exch def
+      /x exch def
+      /savematrix mtrx currentmatrix def
+      x y translate
+      xrad yrad scale
+      0 0 1 startangle endangle arcn
+      savematrix setmatrix
+   end
+ } def
+
+/TGMAX
+ { exch dup 3 1 roll exch dup 3 1 roll gt { pop } { exch pop } ifelse
+ } def
+/TGMIN
+ { exch dup 3 1 roll exch dup 3 1 roll lt { pop } { exch pop } ifelse
+ } def
+/TGSW { stringwidth pop } def
+
+/bd { bind def } bind def
+
+/GS { gsave } bd
+/GR { grestore } bd
+/NP { newpath } bd
+/CP { closepath } bd
+/CHP { charpath } bd
+/CT { curveto } bd
+/L { lineto } bd
+/RL { rlineto } bd
+/M { moveto } bd
+/RM { rmoveto } bd
+/S { stroke } bd
+/F { fill } bd
+/TR { translate } bd
+/RO { rotate } bd
+/SC { scale } bd
+/MU { mul } bd
+/DI { div } bd
+/DU { dup } bd
+/NE { neg } bd
+/AD { add } bd
+/SU { sub } bd
+/PO { pop } bd
+/EX { exch } bd
+/CO { concat } bd
+/CL { clip } bd
+/EC { eoclip } bd
+/EF { eofill } bd
+/IM { image } bd
+/IMM { imagemask } bd
+/ARY { array } bd
+/SG { setgray } bd
+/RG { setrgbcolor } bd
+/SD { setdash } bd
+/W { setlinewidth } bd
+/SM { setmiterlimit } bd
+/SLC { setlinecap } bd
+/SLJ { setlinejoin } bd
+/SH { show } bd
+/FF { findfont } bd
+/MS { makefont setfont } bd
+/AR { arcto 4 {pop} repeat } bd
+/CURP { currentpoint } bd
+/FLAT { flattenpath strokepath clip newpath } bd
+/TGSM { tgiforigctm setmatrix } def
+/TGRM { savematrix setmatrix } def
+
+end
+
+%%EndProlog
+%%Page: 1 1
+
+%%PageBoundingBox: 32 637 246 769
+tgifdict begin
+/tgifsavedpage save def
+
+1 SM
+1 W
+
+0 SG
+
+72 0 MU 72 11.602 MU TR
+72 128 DI 100.000 MU 100 DI DU NE SC
+
+GS
+
+/tgiforigctm matrix currentmatrix def
+
+% POLY/OPEN-SPLINE
+0 SG
+GS
+   [2 2] 0 SD
+   NP
+      300 235 M
+      -100 0 atan DU cos 8.000 MU 300 exch SU
+      exch sin 8.000 MU 135 exch SU L
+   TGSM
+   1 W
+   S
+   [] 0 SD
+GR
+GS
+   TGSM
+   NP
+      300 135 8.000 3.000 0 -100 TGAT
+   1 SG CP F
+   0 SG
+   NP
+      300 135 8.000 3.000 0 -100 TGAT
+   CP F
+GR
+
+% POLY/OPEN-SPLINE
+0 SG
+GS
+   [2 2] 0 SD
+   NP
+      300 235 M
+      50 -100 atan DU cos 8.000 MU 200 exch SU
+      exch sin 8.000 MU 285 exch SU L
+   TGSM
+   1 W
+   S
+   [] 0 SD
+GR
+GS
+   TGSM
+   NP
+      200 285 8.000 3.000 -100 50 TGAT
+   1 SG CP F
+   0 SG
+   NP
+      200 285 8.000 3.000 -100 50 TGAT
+   CP F
+GR
+
+% POLY/OPEN-SPLINE
+0 SG
+GS
+   [2 2] 0 SD
+   NP
+      300 235 M
+      50 100 atan DU cos 8.000 MU 400 exch SU
+      exch sin 8.000 MU 285 exch SU L
+   TGSM
+   1 W
+   S
+   [] 0 SD
+GR
+GS
+   TGSM
+   NP
+      400 285 8.000 3.000 100 50 TGAT
+   1 SG CP F
+   0 SG
+   NP
+      400 285 8.000 3.000 100 50 TGAT
+   CP F
+GR
+
+% TEXT
+NP
+0 SG
+   GS
+      1 W
+      240 235 M
+      GS
+            0 SG
+            /NewCenturySchlbk-Italic FF [32 0 0 -32 0 0] MS
+            (x) SH
+      GR
+   GR
+
+% TEXT
+NP
+0 SG
+   GS
+      1 W
+      420 260 M
+      GS
+            0 SG
+            /NewCenturySchlbk-Italic FF [32 0 0 -32 0 0] MS
+            (y) SH
+      GR
+   GR
+
+% TEXT
+NP
+0 SG
+   GS
+      1 W
+      320 150 M
+      GS
+            0 SG
+            /NewCenturySchlbk-Italic FF [32 0 0 -32 0 0] MS
+            (z) SH
+      GR
+   GR
+
+% TEXT
+NP
+0 SG
+   GS
+      1 W
+      410 220 M
+      GS
+            0 SG
+            /Symbol FF [32 0 0 -32 0 0] MS
+            (S) SH
+      GR
+   GR
+
+% TEXT
+NP
+0 SG
+   GS
+      1 W
+      330 180 M
+      GS
+            0 SG
+            /NewCenturySchlbk-Italic FF [32 0 0 -32 0 0] MS
+            (q) SH
+      GR
+   GR
+
+% POLY/OPEN-SPLINE
+0 SG
+GS
+   NP
+      100 300 M
+      -110 0 atan DU cos 8.000 MU 100 exch SU
+      exch sin 8.000 MU 190 exch SU L
+   TGSM
+   1 W
+   S
+GR
+GS
+   TGSM
+   NP
+      100 190 8.000 3.000 0 -110 TGAT
+   1 SG CP F
+   0 SG
+   NP
+      100 190 8.000 3.000 0 -110 TGAT
+   CP F
+GR
+
+% POLY/OPEN-SPLINE
+0 SG
+GS
+   NP
+      100 300 M
+      50 95 atan DU cos 8.000 MU 195 exch SU
+      exch sin 8.000 MU 350 exch SU L
+   TGSM
+   1 W
+   S
+GR
+GS
+   TGSM
+   NP
+      195 350 8.000 3.000 95 50 TGAT
+   1 SG CP F
+   0 SG
+   NP
+      195 350 8.000 3.000 95 50 TGAT
+   CP F
+GR
+
+% POLY/OPEN-SPLINE
+0 SG
+GS
+   NP
+      100 300 M
+      -25 105 atan DU cos 8.000 MU 205 exch SU
+      exch sin 8.000 MU 275 exch SU L
+   TGSM
+   1 W
+   S
+GR
+GS
+   TGSM
+   NP
+      205 275 8.000 3.000 105 -25 TGAT
+   1 SG CP F
+   0 SG
+   NP
+      205 275 8.000 3.000 105 -25 TGAT
+   CP F
+GR
+
+% TEXT
+NP
+0 SG
+   GS
+      1 W
+      60 290 M
+      GS
+            0 SG
+            /Symbol FF [32 0 0 -32 0 0] MS
+            (S) SH
+      GR
+   GR
+
+% TEXT
+NP
+0 SG
+   GS
+      1 W
+      80 295 M
+      GS
+            0 SG
+            /Times-Roman FF [24 0 0 -24 0 0] MS
+            (p) SH
+      GR
+   GR
+
+% POLY/OPEN-SPLINE
+0 SG
+GS
+   [20 4 4 4] 0 SD
+   NP
+      300 235 M
+      -100 0 atan DU cos 8.000 MU 300 exch SU
+      exch sin 8.000 MU 135 exch SU L
+   TGSM
+   1 W
+   S
+   [] 0 SD
+GR
+GS
+   TGSM
+   NP
+      300 135 8.000 3.000 0 -100 TGAT
+   1 SG CP F
+   0 SG
+   NP
+      300 135 8.000 3.000 0 -100 TGAT
+   CP F
+GR
+
+% POLY/OPEN-SPLINE
+0 SG
+GS
+   [20 4 4 4] 0 SD
+   NP
+      300 235 M
+      75 -65 atan DU cos 8.000 MU 235 exch SU
+      exch sin 8.000 MU 310 exch SU L
+   TGSM
+   1 W
+   S
+   [] 0 SD
+GR
+GS
+   TGSM
+   NP
+      235 310 8.000 3.000 -65 75 TGAT
+   1 SG CP F
+   0 SG
+   NP
+      235 310 8.000 3.000 -65 75 TGAT
+   CP F
+GR
+
+% POLY/OPEN-SPLINE
+0 SG
+GS
+   [20 4 4 4] 0 SD
+   NP
+      300 235 M
+      20 115 atan DU cos 8.000 MU 415 exch SU
+      exch sin 8.000 MU 255 exch SU L
+   TGSM
+   1 W
+   S
+   [] 0 SD
+GR
+GS
+   TGSM
+   NP
+      415 255 8.000 3.000 115 20 TGAT
+   1 SG CP F
+   0 SG
+   NP
+      415 255 8.000 3.000 115 20 TGAT
+   CP F
+GR
+
+% ARC
+0 SG
+GS
+   GS
+      NP
+         300 188 26 14 -111 -407 TGAR
+      3 W
+      S
+   GR
+GR
+GS
+   TGSM
+   NP
+      310 175 12.000 5.000 -48 -10 TGAT
+   1 SG CP F
+   0 SG
+   NP
+      310 175 12.000 5.000 -48 -10 TGAT
+   CP F
+GR
+
+% POLY/OPEN-SPLINE
+0 SG
+GS
+   NP
+      300 235 M
+      -85 15 atan DU cos 8.000 MU 315 exch SU
+      exch sin 8.000 MU 150 exch SU L
+   TGSM
+   1 W
+   S
+GR
+GS
+   TGSM
+   NP
+      315 150 8.000 3.000 15 -85 TGAT
+   1 SG CP F
+   0 SG
+   NP
+      315 150 8.000 3.000 15 -85 TGAT
+   CP F
+GR
+
+% POLY/OPEN-SPLINE
+0 SG
+GS
+   NP
+      300 235 M
+      10 -60 atan DU cos 8.000 MU 240 exch SU
+      exch sin 8.000 MU 245 exch SU L
+   TGSM
+   1 W
+   S
+GR
+GS
+   TGSM
+   NP
+      240 245 8.000 3.000 -60 10 TGAT
+   1 SG CP F
+   0 SG
+   NP
+      240 245 8.000 3.000 -60 10 TGAT
+   CP F
+GR
+
+% POLY/OPEN-SPLINE
+0 SG
+GS
+   NP
+      300 235 M
+      20 115 atan DU cos 8.000 MU 415 exch SU
+      exch sin 8.000 MU 255 exch SU L
+   TGSM
+   1 W
+   S
+GR
+GS
+   TGSM
+   NP
+      415 255 8.000 3.000 115 20 TGAT
+   1 SG CP F
+   0 SG
+   NP
+      415 255 8.000 3.000 115 20 TGAT
+   CP F
+GR
+
+% ARC
+GS
+   371 245 TR
+   [0.985 0.174 -0.174 0.985 -4 0] CO
+   371 NE 245 NE TR
+0 SG
+GS
+   GS
+      NP
+         371 245 12 25 36 322 TGAN
+      TGSM
+      3 W
+      S
+   GR
+GR
+GS
+   TGSM
+   NP
+      380 241 12.000 5.000 -2 48 TGAT
+   1 SG CP F
+   0 SG
+   NP
+      380 241 12.000 5.000 -2 48 TGAT
+   CP F
+GR
+GR
+
+% TEXT
+NP
+0 SG
+   GS
+      1 W
+      375 210 M
+      GS
+            0 SG
+            /NewCenturySchlbk-Italic FF [32 0 0 -32 0 0] MS
+            (q) SH
+      GR
+   GR
+
+% TEXT
+NP
+0 SG
+   GS
+      1 W
+      345 190 M
+      GS
+            0 SG
+            /NewCenturySchlbk-Roman FF [20 0 0 -20 0 0] MS
+            (1) SH
+      GR
+   GR
+
+% TEXT
+NP
+0 SG
+   GS
+      1 W
+      390 215 M
+      GS
+            0 SG
+            /NewCenturySchlbk-Roman FF [20 0 0 -20 0 0] MS
+            (2) SH
+      GR
+   GR
+
+% TEXT
+NP
+0 SG
+   GS
+      1 W
+      430 225 M
+      GS
+            0 SG
+            /Times-Roman FF [24 0 0 -24 0 0] MS
+            (j) SH
+      GR
+   GR
+
+% POLY/OPEN-SPLINE
+0 SG
+GS
+   [20 4 4 4] 0 SD
+   NP
+      100 300 M
+      -65 200 atan DU cos 8.000 MU 300 exch SU
+      exch sin 8.000 MU 235 exch SU L
+   TGSM
+   1 W
+   S
+   [] 0 SD
+GR
+GS
+   TGSM
+   NP
+      300 235 8.000 3.000 200 -65 TGAT
+   1 SG CP F
+   0 SG
+   NP
+      300 235 8.000 3.000 200 -65 TGAT
+   CP F
+GR
+
+% TEXT
+NP
+0 SG
+   GS
+      1 W
+      195 315 M
+      GS
+            0 SG
+            /Symbol FF [32 0 0 -32 0 0] MS
+            (S) SH
+      GR
+   GR
+
+% TEXT
+NP
+0 SG
+   GS
+      1 W
+      215 320 M
+      GS
+            0 SG
+            /Times-Roman FF [24 0 0 -24 0 0] MS
+            (o) SH
+      GR
+   GR
+
+GR
+tgifsavedpage restore
+end
+showpage
+
+%%Trailer
+%MatchingCreationDate: Tue Aug 11 20:08:08 2009
+%%DocumentFonts: NewCenturySchlbk-Roman
+%%+ Times-Roman
+%%+ Symbol
+%%+ NewCenturySchlbk-Italic
+%%EOF
