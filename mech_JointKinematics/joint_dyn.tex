@@ -1086,27 +1086,9 @@ ${}^{\mathrm{j}}\bm{t}^{\mathrm{T}}{}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}\equiv\bm{
 
 \noindent{\bf 平面関節}
 
-円筒関節と同様に考えれば，
+円筒関節と同様に考えれば，回転関節の変位及び回転歪みは次のように計算できる．
+
 \begin{align*}
-q_{1}&={}^{\mathrm{o}}\bm{p}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\hat{\bm{x}}_{\mathrm{j}}
-\\
-q_{2}&={}^{\mathrm{o}}\bm{p}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\hat{\bm{y}}_{\mathrm{j}}
-\\
-{}^{\mathrm{o}}\bm{t}_{\mathrm{L}}&={}^{\mathrm{o}}\bm{p}_{\mathrm{j}}
--q_{1}\,{}^{\mathrm{o}}\hat{\bm{x}}_{\mathrm{j}}
--q_{2}\,{}^{\mathrm{o}}\hat{\bm{y}}_{\mathrm{j}}
-=
-({}^{\mathrm{o}}\bm{p}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\hat{\bm{z}}_{\mathrm{j}})
-{}^{\mathrm{o}}\hat{\bm{z}}_{\mathrm{j}}
-\quad\Leftrightarrow\quad
-{}^{\mathrm{j}}\bm{t}_{\mathrm{L}}
-={}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\bm{p}_{\mathrm{j}}
--q_{1}\,\hat{\bm{x}}
--q_{2}\,\hat{\bm{y}}
-=
-({}^{\mathrm{o}}\bm{p}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\hat{\bm{z}}_{\mathrm{j}})
-\hat{\bm{z}}
-\\
 {}^{0}\bm{t}_{\mathrm{A}}
 &=\mathrm{atan2}(\|\hat{\bm{z}}\times{}^{\mathrm{o}}\hat{\bm{z}}_{\mathrm{j}}\|,\hat{\bm{z}}^{\mathrm{T}}{}^{\mathrm{o}}\hat{\bm{z}}_{\mathrm{j}})
 \frac{\hat{\bm{z}}\times{}^{\mathrm{o}}\hat{\bm{z}}_{\mathrm{j}}}{\|\hat{\bm{z}}\times{}^{\mathrm{o}}\hat{\bm{z}}_{\mathrm{j}}\|}
@@ -1116,18 +1098,33 @@ q_{2}&={}^{\mathrm{o}}\bm{p}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\hat{\bm{y}
 \frac{{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}\hat{\bm{z}}\times\hat{\bm{z}}}
      {\|{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}\hat{\bm{z}}\times\hat{\bm{z}}\|}
 \\
-{}^{\mathrm{o}}\bm{R}_{o^{\prime}}&=\bm{R}_{\xi}({}^{\mathrm{o}}\bm{t}_{\mathrm{A}})
+{}^{\mathrm{o}}\bm{R}_{\mathrm{o}^{\prime}}&=\bm{R}_{\xi}({}^{\mathrm{o}}\bm{t}_{\mathrm{A}})
 \\
 q_{3}&=\frac{
- \mathrm{atan2}(\|{}^{\mathrm{o}}\hat{\bm{x}}_{o^{\prime}}\times{}^{\mathrm{o}}\hat{\bm{x}}_{\mathrm{j}}\|,
-        {}^{\mathrm{o}}\hat{\bm{x}}_{o^{\prime}}^{\mathrm{T}}{}^{\mathrm{o}}\hat{\bm{x}}_{\mathrm{j}})
-+\mathrm{atan2}(\|{}^{\mathrm{o}}\hat{\bm{y}}_{o^{\prime}}\times{}^{\mathrm{o}}\hat{\bm{y}}_{\mathrm{j}}\|,
-        {}^{\mathrm{o}}\hat{\bm{y}}_{o^{\prime}}^{\mathrm{T}}{}^{\mathrm{o}}\hat{\bm{y}}_{\mathrm{j}})
+ \mathrm{atan2}(\|{}^{\mathrm{o}}\hat{\bm{x}}_{\mathrm{o}^{\prime}}\times{}^{\mathrm{o}}\hat{\bm{x}}_{\mathrm{j}}\|,
+        {}^{\mathrm{o}}\hat{\bm{x}}_{\mathrm{o}^{\prime}}^{\mathrm{T}}{}^{\mathrm{o}}\hat{\bm{x}}_{\mathrm{j}})
++\mathrm{atan2}(\|{}^{\mathrm{o}}\hat{\bm{y}}_{\mathrm{o}^{\prime}}\times{}^{\mathrm{o}}\hat{\bm{y}}_{\mathrm{j}}\|,
+        {}^{\mathrm{o}}\hat{\bm{y}}_{\mathrm{o}^{\prime}}^{\mathrm{T}}{}^{\mathrm{o}}\hat{\bm{y}}_{\mathrm{j}})
  }{2}
 \end{align*}
-によって関節変位と歪みが求まる．
-${}^{\mathrm{j}}\bm{t}^{\mathrm{T}}{}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}\equiv\bm{O}$も円筒関節と同様に考えれば明らか．
 
+並進関節の変位及び並進歪みは次式を満たす．
+\begin{align*}
+{}^{\mathrm{o}}\bm{p}_{\mathrm{j}}={}^{\mathrm{o}}\bm{R}_{\mathrm{o}^\prime}\begin{bmatrix}
+q_{1} \\ q_{2} \\ d_{z}
+\end{bmatrix}
+,\quad
+{}^{\mathrm{o}}\bm{t}_{\mathrm{L}}=d_{z}{}^{\mathrm{o}}\hat{\bm{z}}_{\mathrm{o}^\prime}
+\qquad\Leftrightarrow\qquad
+\begin{bmatrix}
+q_{1} \\ q_{2} \\ d_{z}
+\end{bmatrix}
+={}^{\mathrm{o}}\bm{R}_{\mathrm{o}^\prime}^{\mathrm{T}}{}^{\mathrm{o}}\bm{p}_{\mathrm{j}}
+,\quad
+{}^{\mathrm{j}}\bm{t}_{\mathrm{L}}=d_{z}{}^{\mathrm{o}}\bm{R}_{\mathrm{j}}^{\mathrm{T}}{}^{\mathrm{o}}\hat{\bm{z}}_{\mathrm{o}^\prime}
+\end{align*}
+${}^{\mathrm{j}}\bm{t}$は第3,4,5成分が0なので，
+明らかに${}^{\mathrm{j}}\bm{t}^{\mathrm{T}}{}^{\mathrm{j}}\bm{H}_{\mathrm{Jj}}\equiv\bm{O}$となる．
 
 
 \vspace{\baselineskip}

@@ -1,0 +1,311 @@
+﻿\documentclass[a4paper]{jsarticle}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{graphicx}
+\usepackage{ascmac}
+\usepackage{url}
+\everymath{\displaystyle}
+
+\flushbottom
+\sloppy
+
+\setlength{\paperwidth}{210mm}
+\setlength{\hoffset}{0mm}
+\setlength{\textwidth}{\paperwidth}
+\addtolength{\textwidth}{-30mm}
+\setlength{\oddsidemargin}{-1in}
+\addtolength{\oddsidemargin}{15mm}
+\setlength{\columnsep}{7mm}
+
+\setlength{\paperheight}{297mm}
+\setlength{\voffset}{0mm}
+\setlength{\textheight}{\paperheight}
+\addtolength{\textheight}{-60mm}
+\setlength{\topmargin}{-1in}
+\addtolength{\topmargin}{20mm}
+\setlength{\headheight}{0mm}
+\setlength{\headsep}{0mm}
+\setlength{\footskip}{10mm}
+
+\title{線形計画問題・2次計画問題の例題を自動生成したい}
+
+\begin{document}
+\maketitle
+
+\section{まえがき}
+
+最適化ソルバを自分で実装したことのある人なら分かって下さると思いますが，デバッグが結構大変です．
+変数が数個，制約が数本程度の例題ならば教科書などに書いてありますが，プログラムの信頼性を高めるには規模の大きい問題や悪条件問題をたくさん試さなければなりません．
+
+線形計画問題のデータセットとしては
+[netlib]\url{https://www.netlib.org/lp/}や
+[Mittelmann]\url{https://plato.asu.edu/bench.html}，
+2次計画問題では[QPLIB]\url{https://qplib.zib.de/}や
+[Maros-Mészáros]\url{https://www.doc.ic.ac.uk/~im/}
+がそれぞれよく知られています．
+これらは[QPSやMPS]\url{https://documentation.sas.com/doc/en/ormpug/15.2/ormpug_mpsds_sect017.htm}
+といった標準的フォーマットを採用しています．
+このフォーマットの読み込み処理も用意するのにひと手間かかるし，さすがに問題規模が大き過ぎるんじゃないか？という気もします．
+手頃なサイズの問題をプログラムの中で自動生成できるならば，それが一番楽です．
+そのような方法を解説しているウェブ記事が見当たらなかったので，自分で書くことにしました．
+
+
+\section{線形計画問題の例題自動生成}
+
+線形計画問題とは，
+ある線形方程式$\boldsymbol{A}\boldsymbol{x}=\boldsymbol{b}$を満たす$\boldsymbol{x}$のうち，
+ある線形関数$z=\boldsymbol{c}^{\mathrm{T}}\boldsymbol{x}$の値を最小化する
+$\boldsymbol{x}=\boldsymbol{x}^{*}$を求める問題です．
+\begin{align}
+\begin{array}{c}
+\boldsymbol{x}^{*}=\mathop{\mathrm{arg~min}}_{\boldsymbol{x}}\left\{\boldsymbol{c}^{\mathrm{T}}\boldsymbol{x}
+\left|\boldsymbol{x}\in\mathcal{X}\right.
+\right\}
+\\
+\mathcal{X}=\left\{\boldsymbol{x}\left|
+\boldsymbol{A}\boldsymbol{x}=\boldsymbol{b},
+\boldsymbol{x}\geq\boldsymbol{0}
+\right.
+\right\}
+\end{array}
+\label{pb:lp}
+\end{align}
+$\boldsymbol{x}$は{\bf 設計変数}，
+$\boldsymbol{x}^{*}$は{\bf 最適解}，
+$z$は{\bf 目的関数}と呼ばれます．
+
+設計変数の数が$n$個，等式制約の数が$m$本であるとしましょう．
+解き方については[別記事]()で解説しましたが，
+まず設計変数を$m$個の{\bf 基底変数}$\boldsymbol{x}_{\mathrm{B}}$と$n-m$個の{\bf 非基底変数}$\boldsymbol{x}_{\mathrm{N}}$に分けることができ，
+最適解においては$\boldsymbol{x}_{\mathrm{B}}=\boldsymbol{0}$となるのでした．
+
+さらに，最適解においては{\bf KKT（Karush-Kuhn-Tucker）条件}が成り立ちます．
+これについても[別記事]()で解説しました．
+
+等式制約条件$\boldsymbol{A}\boldsymbol{x}=\boldsymbol{b}$と変数の非負制約条件$\boldsymbol{x}\geq\boldsymbol{0}$がありますので，
+それぞれに対応する随伴変数$\boldsymbol{\lambda}$と$\boldsymbol{\mu}$が存在します．
+このとき，KKT条件は次のように書けます．
+\begin{align*}
+\boldsymbol{c}-\boldsymbol{A}^{\mathrm{T}}\boldsymbol{\lambda}^{*}-\boldsymbol{\mu}^{*}=\boldsymbol{0}
+\\
+\boldsymbol{A}\boldsymbol{x}^{*}=\boldsymbol{b}
+\\
+\boldsymbol{x}^{*\mathrm{T}}\boldsymbol{\mu}^{*}=0, \boldsymbol{\mu}^{*}\geq\boldsymbol{0}, \boldsymbol{x}^{*}\geq\boldsymbol{0}
+\end{align*}
+ただし，$\boldsymbol{\lambda}^{*}$および$\boldsymbol{\mu}^{*}$は最適解$\boldsymbol{x}^{*}$に対応する随伴変数の値です．
+3番目の条件（相補条件）$\boldsymbol{x}^{*\mathrm{T}}\boldsymbol{\mu}^{*}=0$はつまり，
+$\boldsymbol{x}^{*}$の$i$番目成分$x_{i}^{*}$が0でないならば$\boldsymbol{\mu}^{*}$の$i$番目成分$\mu_{i}^{*}$は0となる，ということを意味しています．
+$\boldsymbol{\lambda}$は等式制約条件に対応するラグランジュ乗数に相当するので，値に制約は課されないことに注意しましょう．
+重要なことに，線形計画問題においてはKKT条件は最適解の必要十分条件となります．
+
+上記の事柄から，直接的に線形計画問題の例題を作るアルゴリズムを導けます．
+
+1. 設計変数のインデックス$1\sim n$を，
+基底変数のインデックス集合$\mathcal{I}_{\mathrm{B}}$と
+非基底変数のインデックス集合$\mathcal{I}_{\mathrm{N}}$に（たとえば乱数的に）分ける．
+ただし$|\mathcal{I}_{\mathrm{B}}|=m$，$|\mathcal{I}_{\mathrm{N}}|=n-m$とする．
+
+2. 最適解$\boldsymbol{x}^{*}$を先に作る．
+$i=1\sim n$について，$i\in\mathcal{I}_{\mathrm{B}}$ならば
+$x_{i}^{*}$は任意の正の数，$\mu_{i}^{*}$は0とする．
+さもなければ$i\in\mathcal{I}_{\mathrm{N}}$なので，
+$x_{i}^{*}$は0，$\mu_{i}^{*}$は任意の正の数とする．
+
+3. 行列$\boldsymbol{A}$を（たとえば乱数的に）作り，$\boldsymbol{b}=\boldsymbol{A}\boldsymbol{x}^{*}$として$\boldsymbol{b}$を決める．
+
+4. $\boldsymbol{\lambda}^{*}$を（たとえば乱数的に）作り，
+$\boldsymbol{c}=\boldsymbol{A}^{\mathrm{T}}\boldsymbol{\lambda}^{*}+\boldsymbol{\mu}^{*}$として$\boldsymbol{c}$を決める．
+
+ZMのテストプログラム\verb|opt_lp_test.c|の中の関数\verb|generate_lp()|に，これを実装しています．
+\begin{verbatim}
+bool generate_lp(int n, int m, zVec *c, zMat *a, zVec *b, zVec *ans)
+{
+  zVec ans_dual, l;
+  zIndex index;
+  bool ret = false;
+  int i;
+
+  if( m >= n ){
+    eprintf( "cannot generate a solvable problem with the number of equalities %d > the number of variables %d\n", m, n );
+    return false;
+  }
+  *c = zVecAlloc( n );
+  *a = zMatAlloc( m, n );
+  *b = zVecAlloc( m );
+  *ans = zVecAlloc( n );
+  ans_dual = zVecAlloc( n );
+  l = zVecAlloc( m );
+  index = zIndexCreate( n );
+  if( !*c || !*a || !*b || !*ans || !ans_dual || !l || !index )
+    goto TERMINATE;
+
+  zIndexShuffle( index, 0 );
+  for( i=0; i<m; i++ ){
+    zVecSetElemNC( *ans, zIndexElemNC(index,i), zRandF( 0, 10 ) );
+    zVecSetElemNC( ans_dual, zIndexElemNC(index,i), 0 );
+  }
+  for( ; i<n; i++ ){
+    zVecSetElemNC( *ans, zIndexElemNC(index,i), 0 );
+    zVecSetElemNC( ans_dual, zIndexElemNC(index,i), zRandF( 0, 10 ) );
+  }
+  zMatRandUniform( *a, -10, 10 ); /* NOTE: this does not strictly guarantee that a is row-fullrank. */
+  zMulMatVec( *a, *ans, *b );
+  zVecRandUniform( l, -5, 5 ); /* lambda vector */
+  zMulMatTVec( *a, l, *c );
+  zVecAddDRC( *c, ans_dual );
+  ret = true;
+
+ TERMINATE:
+  zVecFreeAtOnce( 2, ans_dual, l );
+  zIndexFree( index );
+  if( !ret ){
+    zVecFree( *c );
+    zMatFree( *a );
+    zVecFree( *b );
+    zVecFree( *ans );
+  }
+  return ret;
+}
+\end{verbatim}
+
+適当な\verb|n|（$n$に対応）と\verb|m|（$m$に対応）を与えれば，
+\verb|zMat|インスタンス\verb|a|（$\boldsymbol{A}$に対応）と\verb|zVec|インスタンス\verb|c|（$\boldsymbol{c}$に対応）および\verb|b|（$\boldsymbol{b}$に対応），
+最適解\verb|ans|（$\boldsymbol{x}^{*}$に対応）が生成されます．
+
+ただし，次のことに注意する必要があります．
+\begin{itemize}
+\item{行列$\boldsymbol{A}$は乱数的に生成しているだけなので，行フルランクであることは保証されません．
+したがって，最適解が$\boldsymbol{x}^{*}$とならない可能性がごくごくわずかながら存在します．
+}
+\item{逆に，行列$\boldsymbol{A}$が行フルランクとならないケースを意図的に生成するのが困難です．
+$\boldsymbol{A}$自体は，たとえば$n$より少ない$n^{\prime}$行まで乱数的に生成しておいて，残り$n-n^{\prime}$行分はそれらの線形結合で作るという手があります．
+しかし，そうして生成した問題を線形計画法ソルバに解かせたとき，$\boldsymbol{x}^{*}$と一致するかどうかはなんとも分かりません．
+}
+\item{解が存在しないケースを生成することができません．}
+\end{itemize}
+
+
+
+\section{2次計画問題の例題自動生成}
+
+2次計画問題とは，
+線形不等式$\boldsymbol{A}\boldsymbol{x}\geq\boldsymbol{b}$を満たし，
+かつ2次関数$z=\frac{1}{2}\boldsymbol{x}^{\mathrm{T}}\boldsymbol{Q}\boldsymbol{x}+\boldsymbol{c}^{\mathrm{T}}\boldsymbol{x}$の値を最小化する
+$\boldsymbol{x}=\boldsymbol{x}^{*}$を求める問題です．
+\begin{align*}
+\boldsymbol{x}^{*}=\mathop{\mathrm{arg~min}}_{\boldsymbol{x}}\left\{
+\left.
+z=\frac{1}{2}\boldsymbol{x}^{\mathrm{T}}\boldsymbol{Q}\boldsymbol{x}+\boldsymbol{c}^{\mathrm{T}}\boldsymbol{x}
+\right|
+\boldsymbol{A}\boldsymbol{x}\geq\boldsymbol{b}
+\right\}
+\end{align*}
+ただし，
+$\boldsymbol{Q}$は対称な正方行列であることが仮定されます．
+$\boldsymbol{x}$は{\bf 設計変数}，
+$\boldsymbol{x}^{*}$は{\bf 最適解}，
+$z$は{\bf 目的関数}と呼ばれます．
+多くの場合，$\boldsymbol{Q}$はさらに正定値行列であると仮定されます．
+この時は特に{\bf 凸2次計画問題}と呼ばれます．
+
+前節と同様に，設計変数の数が$n$個，等式制約の数が$m$本であるとしましょう．
+解き方については[別記事]()や[別記事]()で解説しました．
+
+2次計画問題の例題も，KKT条件に基づいて生成することができます．
+すなわち最適解は次の条件を満たします．
+\begin{align*}
+\boldsymbol{Q}\boldsymbol{x}^{*}-\boldsymbol{A}^{\mathrm{T}}\boldsymbol{\lambda}^{*}+\boldsymbol{c}=\boldsymbol{0}
+\\
+\boldsymbol{A}\boldsymbol{x}^{*}\geq\boldsymbol{b}
+\\
+\boldsymbol{\lambda}^{*\mathrm{T}}(\boldsymbol{A}\boldsymbol{x}^{*}-\boldsymbol{b})=0, \boldsymbol{\lambda}^{*}\geq\boldsymbol{0}
+\end{align*}
+3番目の条件（相補条件）は，
+$i$番目不等式制約条件の等号が成り立たないならば，
+$\boldsymbol{\lambda}$の$i$番目成分$\lambda_{i}^{*}=0$となる，ということを意味します．
+2次計画問題においても，KKT条件は最適解の必要十分条件です．
+
+上記の事柄から，2次計画問題の例題を作るアルゴリズムを導けます．
+
+1. 最適解$\boldsymbol{x}^{*}$を（たとえば乱数的に）生成する．
+
+2. 行列$\boldsymbol{R}$を乱数的に生成し，$\boldsymbol{Q}=\boldsymbol{R}^{\mathrm{T}}\boldsymbol{R}+\boldsymbol{1}$とする．
+ただし，$\boldsymbol{1}$は$n\times n$単位行列．
+（これにより，$\boldsymbol{Q}$の対称性・正則性・正定値性が保証されます．）
+
+3. 行列$\boldsymbol{A}$を（たとえば乱数的に）生成する．
+
+4. $\boldsymbol{\lambda}^{*}$を生成する．
+$i=1\sim m$について，毎回0と1の2値乱数を求め，0ならば$\lambda_{i}^{*}=0$，1ならば$\lambda_{i}^{*}$適当な正の数とする．
+
+5. $\boldsymbol{b}=\boldsymbol{A}\boldsymbol{x}^{*}-\bar{\boldsymbol{b}}$とする．
+ただし，$\bar{\boldsymbol{b}}$はその$i$番目$\bar{b}_{i}$が，
+$\lambda_{i}^{*}=0$ならば適当な正の数，さもなければ0であるようなベクトルである．
+
+6. $\boldsymbol{c}=-\boldsymbol{Q}\boldsymbol{x}^{*}+\boldsymbol{A}^{\mathrm{T}}\boldsymbol{\lambda}^{*}$として$\boldsymbol{c}$を決める．
+
+$\lambda_{i}^{*}>0$に対応する$i$番目の不等式制約条件がいわゆる有効制約条件，すなわち等号が成り立つ条件になります．
+
+
+ZMのテストプログラム\verb|opt_qp_test.c|の中の関数\verb|generate_qp()|に，これを実装しています．
+\begin{verbatim}
+bool generate_qp(int n, int m, double xmin, double xmax, zMat *q, zVec *c, zMat *a, zVec *b, zVec *ans)
+{
+  zMat r;
+  zVec l, d;
+  bool ret = false;
+  int i;
+
+  *q = zMatAllocSqr( n );
+  *c = zVecAlloc( n );
+  *a = zMatAlloc( m, n );
+  *b = zVecAlloc( m );
+  *ans = zVecAlloc( n );
+  r = zMatAllocSqr( n );
+  l = zVecAlloc( m );
+  d = zVecAlloc( n );
+  if( !*q || !*c || !*a || !*b || !*ans || !r || !l || !d ) goto TERMINATE;
+
+  zVecRandUniform( *ans, xmin, xmax ); /* optimum answer */
+  for( i=0; i<zVecSizeNC(l); i++ ) /* lambda vector */
+    zVecSetElemNC( l, i, zRandI(0,1) == 0 ? zRandF( 1.0, 5.0 ) : 0 );
+
+  zMatRandUniform( r, -10, 10 ); /* Q matrix */
+  zMulMatTMat( r, r, *q );
+  for( i=0; i<n; i++ )
+    zMatElemNC(*q,i,i) += 1.0; /* to guarantee positive-definiteness of the matrix. */
+  zMatRandUniform( *a, -10, 10 ); /* A matrix */
+  zMulMatTVec( *a, l, *c ); /* c vector */
+  zMulMatVec( *q, *ans, d );
+  zVecSubDRC( *c, d );
+  zMulMatVec( *a, *ans, *b ); /* b vector */
+  for( i=0; i<zVecSizeNC(l); i++ )
+    if( zVecElemNC(l,i) == 0 ) zVecElemNC(*b,i) -= zRandF( 1.0, 10.0 );
+  ret = true;
+
+ TERMINATE:
+  zMatFree( r );
+  zVecFree( l );
+  zVecFree( d );
+  if( !ret ){
+    zMatFree( *q );
+    zVecFree( *c );
+    zMatFree( *a );
+    zVecFree( *b );
+    zVecFree( *ans );
+  }
+  return ret;
+}
+\end{verbatim}
+
+適当な\verb|n|（$n$に対応）と\verb|m|（$m$に対応）を与えれば，
+\verb|zMat|インスタンス\verb|q|（$\boldsymbol{Q}$に対応）と\verb|a|（$\boldsymbol{A}$に対応），
+\verb|zVec|インスタンス\verb|c|（$\boldsymbol{c}$に対応）と\verb|b|（$\boldsymbol{b}$に対応），
+それに最適解\verb|ans|（$\boldsymbol{x}^{*}$に対応）が生成されます．
+\verb|xmin|と\verb|xmax|は，自動生成する最適解$\boldsymbol{x}^{*}$の各成分の下限値・上限値をそれぞれ意味します．
+解法（たとえばLemke法）によっては$\boldsymbol{x}\geq\boldsymbol{0}$を必要条件とするので，
+それらに合わせるための引数になります．
+
+ただし，行列$\boldsymbol{Q}$が正定値性を満たさないケースや，解が存在しないケースを生成することができません．
+
+
+\end{document}

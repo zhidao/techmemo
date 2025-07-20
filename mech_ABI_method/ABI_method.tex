@@ -1,0 +1,827 @@
+﻿\documentclass[a4paper]{jsarticle}
+\usepackage{amsmath,amssymb,bm}
+\usepackage[dvips]{graphicx}
+\usepackage{svg}
+\usepackage{graphicx}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{color}
+\usepackage{url}
+
+\flushbottom
+\sloppy
+
+\setlength{\paperwidth}{210mm}
+\setlength{\paperheight}{297mm}
+\setlength{\voffset}{0mm}
+\setlength{\textwidth}{\paperwidth}
+\addtolength{\textwidth}{-30mm}
+\setlength{\textheight}{\paperheight}
+\addtolength{\textheight}{-50mm}
+\setlength{\topmargin}{-1in}
+\addtolength{\topmargin}{20mm}
+\setlength{\headheight}{0mm}
+\setlength{\headsep}{0mm}
+\setlength{\footskip}{20mm}
+\setlength{\oddsidemargin}{-1in}
+\addtolength{\oddsidemargin}{15mm}
+\setlength{\columnsep}{7mm}
+
+\title{\Large {\bf 多節体慣性法（Articulated Body Inertia Method）による再帰的順動力学計算アルゴリズム}}
+\author{杉原知道}
+
+\begin{document}
+\maketitle
+
+\section{まえがき}
+
+剛体リンク系に駆動力を与えたとき発生する加速度を求める計算は，{\bf 順動力学計算}と呼ばれます．
+加速度を時間に沿って積分していけば，系の動きをシミュレートすることができます．
+
+順動力学計算のアルゴリズムは幾つか知られています．
+合成剛体法の記事\url{https://qiita.com/zhidao/items/1c89261d2ec4d587482c}
+にも記したように，剛体リンク系の運動方程式は一般的に次の形で表せます．
+\begin{align*}
+\bm{H}(\bm{q})\ddot{\bm{q}}+\bm{b}(\bm{q},\dot{\bm{q}})=\bm{\tau}+\bm{J}^{\mathrm{T}}(\bm{q})\bm{f}
+\end{align*}
+ただし，
+$\bm{q}$は一般化座標，
+$\bm{H}(\bm{q})$は慣性行列，
+$\bm{b}(\bm{q},\dot{\bm{q}})$はバイアス力（遠心力・コリオリ力・重力をまとめたもの），
+$\bm{\tau}$は一般化座標に対応する一般化力（駆動力），
+$\bm{f}$は外力，
+$\bm{J}(\bm{q})$は外力の作用する接触点ヤコビ行列です．
+
+順動力学は，$\bm{\tau}$と外力$\bm{f}$が与えられた下で，上の式を$\ddot{\bm{q}}$について解くことに相当します．
+\begin{align*}
+\ddot{\bm{q}}=\bm{H}(\bm{q})^{-1}\left(\bm{\tau}+\bm{J}^{\mathrm{T}}(\bm{q})-\bm{b}(\bm{q},\dot{\bm{q}})\right)
+\end{align*}
+$\bm{H}(\bm{q})$と$\bm{b}(\bm{q},\dot{\bm{q}})$，$\bm{J}(\bm{q})$が求まれば，この計算は可能であるように思えます．
+実際それは正しく，これらの具体的な求め方としてはWalker {\&} Orinによる{\bf 単位ベクトル法}や{\bf 合成剛体法}が知られています．
+
+M. W. Walker and D. E. Orin, Efficient Dynamic Computer Simulation of Robotic Mechanisms, Transactions of the ASME, Journal of Dynamic Systems, Measurement, and Control, Vol. 104, pp. 205--211, 1982.
+
+ただしこの方法は，一般化座標の数（$\bm{q}$の成分の数）を$n$としたときに，計算量が$n$の3乗オーダーとなることが知られており，$n$が増えていくと計算時間はみるみる増えてしまいます．
+
+Featherstoneが博士論文で発表した{\bf 多節体慣性法（Articulated Body Inertia Method，ABI法）}は，
+計算量が$n$の1乗オーダーになる効率の良いアルゴリズムです．
+
+R. Featherstone, The Calculation of Robot Dynamics Using Articulated-Body Inertias, The International Journal of Robotics Research 2(1):13--30 (1983).
+
+本記事ではこれを紹介します．
+
+後に，これを原型とした{\bf 分割統治法（Divide-and-Conquer Method）}もFeatherstone自身に提案されました．
+これはプロセッサ数が$n$ならば計算量のオーダーは$\log n$になるという，事実上最速のアルゴリズムです．
+本記事ではこれは紹介しませんが，興味のある方は調べてみて下さい．
+
+R. Featherstone, A Divide-and Conquer Articulated-Body Algorithm for Parallel {$O(\log(n))$} Calculation of Rigid-Body Dynamics (Part I {\&} II), The International Journal of Robotics Research, 18(9):867--892 (1999).
+
+
+
+
+
+\section{基本方程式}
+
+\subsection{速度・加速度の連鎖律}
+
+リンク$i$の
+位置を${}^{*}\bm{p}_{i}$，
+姿勢を${}^{*}\bm{R}_{i}$，
+角速度を${}^{*}\bm{\omega}_{i}$，
+重心位置を${}^{*}\bm{p}_{Gi}$，
+質量を$m_{i}$，
+重心回り慣性テンソルを${}^{*}\bm{I}_{i}$
+とそれぞれおきます．
+ただし左肩の${}^{*}$には表現座標系のインデックスが入るものとし，
+表現座標系が慣性座標系の場合には無印とすることにします．
+
+今，リンク$p$とリンク$c$が親子関係にある（関節で連結し，リンク$p$が根リンクにより近い）としましょう．
+座標変換の連鎖律より，
+\begin{align}
+\bm{p}_{c}&=\bm{p}_{p}+\bm{R}_{p}{}^{p}\bm{p}_{c}
+\label{eq:position} \\
+\bm{R}_{c}&=\bm{R}_{p}{}^{p}\bm{R}_{c}
+\label{eq:attitude}
+\end{align}
+また，速度および角速度について，
+\begin{align}
+\dot{\bm{p}}_{c}&=\dot{\bm{p}}_{p}
+ +\bm{\omega}_{p}\times\bm{R}_{p}{}^{p}\bm{p}_{c}
+ +\bm{R}_{p}{}^{p}\dot{\bm{p}}_{c}
+\label{eq:lin_vel} \\
+\bm{\omega}_{c}&=\bm{\omega}_{p}+\bm{R}_{p}{}^{p}\bm{\omega}_{c}
+\label{eq:ang_vel}
+\end{align}
+さらにそれぞれを時間に関して一階微分すれば，
+\begin{align}
+\ddot{\bm{p}}_{c}&=\ddot{\bm{p}}_{p}
+ +\dot{\bm{\omega}}_{p}\times\bm{R}_{p}{}^{p}\bm{p}_{c}
+ +\bm{\omega}_{p}\times(\bm{\omega}_{p}\times\bm{R}_{p}{}^{p}\bm{p}_{c})
+ +2\bm{\omega}_{p}\times\bm{R}_{p}{}^{p}\dot{\bm{p}}_{c}
+ +\bm{R}_{p}{}^{p}\ddot{\bm{p}}_{c}
+\label{eq:lin_acc} \\
+\dot{\bm{\omega}}_{c}&=\dot{\bm{\omega}}_{p}
+ +\bm{\omega}_{p}\times\bm{R}_{p}{}^{p}\bm{\omega}_{c}
+ +\bm{R}_{p}{}^{p}\dot{\bm{\omega}}_{c}
+\label{eq:ang_acc}
+\end{align}
+を得ます．
+%(\ref{eq:lin_vel})(\ref{eq:ang_vel})(\ref{eq:lin_acc})(\ref{eq:ang_acc})を
+上の式を，全てリンク$c$座標系に合わせてそれぞれ姿勢変換すれば，
+\begin{align}
+&\begin{cases}
+&{}^{c}\hat{\bm{v}}_{c}={}^{p}\bm{R}_{c}^{\mathrm{T}}\left(
+{}^{p}\hat{\bm{v}}_{p}
+ +{}^{p}\hat{\bm{\omega}}_{p}\times{}^{p}\bm{p}_{c}
+ +{}^{p}\dot{\bm{p}}_{c}
+ \right) \\
+&{}^{c}\hat{\bm{\omega}}_{c}={}^{p}\bm{R}_{c}^{\mathrm{T}}\left(
+{}^{p}\hat{\bm{\omega}}_{p}+{}^{p}\bm{\omega}_{c}
+\right)
+\end{cases} \nonumber \\
+\Leftrightarrow\quad&
+\left[\begin{array}{@{}c@{}}
+ {}^{c}\hat{\bm{v}}_{c} \\ {}^{c}\hat{\bm{\omega}}_{c}
+\end{array}\right]
+=
+\left[\begin{array}{@{}cc@{}}
+ {}^{p}\bm{R}_{c}^{\mathrm{T}} & -{}^{p}\bm{R}_{c}^{\mathrm{T}}{}^{p}\bm{p}_{c}\times \\
+ \bm{O} & {}^{p}\bm{R}_{c}^{\mathrm{T}}
+\end{array}\right]
+ \left[\begin{array}{@{}c@{}}
+  {}^{p}\hat{\bm{v}}_{p} \\ {}^{p}\hat{\bm{\omega}}_{p}
+ \end{array}\right]
+ +\left[\begin{array}{@{}c@{}}
+  {}^{p}\bm{R}_{c}^{\mathrm{T}}{}^{p}\dot{\bm{p}}_{c} \\
+  {}^{p}\bm{R}_{c}^{\mathrm{T}}{}^{p}\bm{\omega}_{c}
+ \end{array}\right]
+\label{eq:vel} \\
+&\begin{cases}
+&{}^{c}\hat{\bm{a}}_{c}={}^{p}\bm{R}_{c}^{\mathrm{T}}\left\{
+{}^{p}\hat{\bm{a}}_{p}
+ +{}^{p}\hat{\bm{\alpha}}_{p}\times{}^{p}\bm{p}_{c}
+ +{}^{p}\hat{\bm{\omega}}_{p}\times({}^{p}\hat{\bm{\omega}}_{p}\times{}^{p}\bm{p}_{c})
+ +2{}^{p}\hat{\bm{\omega}}_{p}\times{}^{p}\dot{\bm{p}}_{c}
+ +{}^{p}\ddot{\bm{p}}_{c}
+\right\} \\
+&{}^{c}\hat{\bm{\alpha}}_{c}={}^{p}\bm{R}_{c}^{\mathrm{T}}\left(
+ {}^{p}\hat{\bm{\alpha}}_{p}
+ +{}^{p}\hat{\bm{\omega}}_{p}\times{}^{p}\bm{\omega}_{c}
+ +{}^{p}\dot{\bm{\omega}}_{c}
+\right)
+\end{cases} \nonumber \\
+\Leftrightarrow\quad&
+\left[\begin{array}{@{}c@{}}
+ {}^{c}\hat{\bm{a}}_{c} \\ {}^{c}\hat{\bm{\alpha}}_{c}
+\end{array}\right]
+=
+\left[\begin{array}{@{}cc@{}}
+ {}^{p}\bm{R}_{c}^{\mathrm{T}} & -{}^{p}\bm{R}_{c}^{\mathrm{T}}{}^{p}\bm{p}_{c}\times \\
+ \bm{O} & {}^{p}\bm{R}_{c}^{\mathrm{T}}
+\end{array}\right]
+ \left[\begin{array}{@{}c@{}}
+  {}^{p}\hat{\bm{a}}_{p} \\ {}^{p}\hat{\bm{\alpha}}_{p}
+ \end{array}\right]
+ +\left[\begin{array}{@{}c@{}}
+  {}^{p}\bm{R}_{c}^{\mathrm{T}}
+  \{{}^{p}\hat{\bm{\omega}}_{p}\times({}^{p}\hat{\bm{\omega}}_{p}\times{}^{p}\bm{p}_{c}+2{}^{p}\dot{\bm{p}}_{c}\}) \\
+  {}^{p}\bm{R}_{c}^{\mathrm{T}}
+  ({}^{p}\hat{\bm{\omega}}_{p}\times{}^{p}\bm{\omega}_{c})
+ \end{array}\right]
+ +\left[\begin{array}{@{}c@{}}
+  {}^{p}\bm{R}_{c}^{\mathrm{T}}{}^{p}\ddot{\bm{p}}_{c} \\
+  {}^{p}\bm{R}_{c}^{\mathrm{T}}{}^{p}\dot{\bm{\omega}}_{c}
+ \end{array}\right]
+\label{eq:acc}
+\end{align}
+となります．
+ただし，$i=c, p$に対し
+${}^{i}\hat{\bm{v}}_{i}\overset{\mathrm{def}}{=}\bm{R}_{i}^{\mathrm{T}}\dot{\bm{p}}_{i}$，
+${}^{i}\hat{\bm{a}}_{i}\overset{\mathrm{def}}{=}\bm{R}_{i}^{\mathrm{T}}\ddot{\bm{p}}_{i}$，
+${}^{i}\hat{\bm{\omega}}_{i}\overset{\mathrm{def}}{=}\bm{R}_{i}^{\mathrm{T}}\bm{\omega}_{i}$，
+${}^{i}\hat{\bm{\alpha}}_{i}\overset{\mathrm{def}}{=}\bm{R}_{i}^{\mathrm{T}}\dot{\bm{\omega}}_{i}$
+とそれぞれ定義しました．
+また，任意のベクトル$\bm{x}$に対し$\bm{x}\times$は，$\bm{x}$との外積と等価な計算を与える$3\times 3$歪対称行列を意味します．
+
+${}^{i}\bm{p}_{Gi}=\mathrm{const.}$であることに注意すれば，
+リンク$i$の重心加速度は，
+\begin{align}
+\ddot{\bm{p}}_{Gi}
+&=\ddot{\bm{p}}_{i}
+ +\dot{\bm{\omega}}_{i}\times\bm{R}_{i}{}^{i}\bm{p}_{Gi}
+ +\bm{\omega}_{i}\times(\bm{\omega}_{i}\times\bm{R}_{i}{}^{i}\bm{p}_{Gi})
+ \nonumber \\
+&=\bm{R}_{i}\{
+{}^{i}\hat{\bm{a}}_{i}
+ +{}^{i}\hat{\bm{\alpha}}_{i}\times{}^{i}\bm{p}_{Gi}
+ +{}^{i}\hat{\bm{\omega}}_{i}\times({}^{i}\hat{\bm{\omega}}_{i}\times{}^{i}\bm{p}_{Gi})
+\}
+\label{eq:com_acc}
+\end{align}
+となります．
+
+
+\subsection{運動方程式}
+
+リンク$i$の運動方程式は，
+\begin{align}
+m_{i}\ddot{\bm{p}}_{Gi}&=\bar{\bm{f}}_{Gi}
+ \label{eq:eqm_lin} \\
+\bm{I}_{i}\dot{\bm{\omega}}_{i}+
+\bm{\omega}_{i}\times\bm{I}_{i}\bm{\omega}_{i}&=\bar{\bm{n}}_{Gi}
+ \label{eq:eqm_ang}
+\end{align}
+ただし$\bar{\bm{f}}_{Gi}$，$\bar{\bm{n}}_{Gi}$はそれぞれ，
+リンク$i$重心に作用する合力・合トルクであり，
+$\ddot{\bm{p}}_{Gi}$は重力加速度を含むものとします．
+リンク$i$の原点に作用する合力$\bar{\bm{f}}_{i}$・合トルク$\bar{\bm{n}}_{i}$に
+直せば，
+\begin{align}
+\bar{\bm{f}}_{Gi}&=\bar{\bm{f}}_{i}
+ \label{eq:force_g} \\
+\bar{\bm{n}}_{Gi}&=(\bm{p}_{i}-\bm{p}_{Gi})\times\bar{\bm{f}}_{i}+\bar{\bm{n}}_{i}
+ \label{eq:torque_g}
+\end{align}
+%式(\ref{eq:com_acc})(\ref{eq:eqm_lin})(\ref{eq:eqm_ang})(\ref{eq:force_g})(\ref{eq:torque_g})より，次式を得る．
+前節で得た重心の加速度も合わせて上の式をまとめると，次を得ます．
+\begin{align}
+&\begin{cases}
+&m_{i}\{
+{}^{i}\hat{\bm{a}}_{i}
+ +{}^{i}\hat{\bm{\alpha}}_{i}\times{}^{i}\bm{p}_{Gi}
+ +{}^{i}\hat{\bm{\omega}}_{i}\times({}^{i}\hat{\bm{\omega}}_{i}\times{}^{i}\bm{p}_{Gi})\}={}^{i}\bar{\bm{f}}_{i}
+ \\
+&{}^{i}\bm{I}_{i}{}^{i}\hat{\bm{\alpha}}_{i}+
+{}^{i}\hat{\bm{\omega}}_{i}\times{}^{i}\bm{I}_{i}{}^{i}\hat{\bm{\omega}}_{i}
+ =-{}^{i}\bm{p}_{Gi}\times{}^{i}\bar{\bm{f}}_{i}+{}^{i}\bar{\bm{n}}_{i}
+\end{cases} \nonumber \\
+\Leftrightarrow\quad&
+\left[\begin{array}{@{}cc@{}}
+m_{i}\bm{1} & -m_{i}{}^{i}\bm{p}_{Gi}\times \\
+m_{i}{}^{i}\bm{p}_{Gi}\times & {}^{i}\bar{\bm{I}}_{i}
+\end{array}\right]
+\left[\begin{array}{@{}c@{}}
+ {}^{i}\hat{\bm{a}}_{i} \\ {}^{i}\hat{\bm{\alpha}}_{i}
+\end{array}\right]
++
+\left[\begin{array}{@{}c@{}}
+ m_{i}{}^{i}\hat{\bm{\omega}}_{i}\times({}^{i}\hat{\bm{\omega}}_{i}\times{}^{i}\bm{p}_{Gi}) \\
+ {}^{i}\hat{\bm{\omega}}_{i}\times{}^{i}\bar{\bm{I}}_{i}{}^{i}\hat{\bm{\omega}}_{i}
+\end{array}\right]
+=
+\left[\begin{array}{@{}c@{}}
+ {}^{i}\bar{\bm{f}}_{i} \\ {}^{i}\bar{\bm{n}}_{i}
+\end{array}\right]
+\label{eq:eqm}
+\end{align}
+ただし
+\begin{align}
+{}^{i}\bar{\bm{I}}_{i}\equiv
+ {}^{i}\bm{I}_{i}-m_{i}{}^{i}\bm{p}_{Gi}\times^{2}
+ \label{eq:inertia_origin}
+\end{align}
+とおきました．
+これはリンク$i$の座標系$i$原点まわり慣性テンソルです．
+
+
+\subsection{合力・合トルク}
+
+リンク$p$原点にかかる合力・合トルクは，
+\begin{align}
+&\begin{cases}
+&{}^{p}\bar{\bm{f}}_{p}=
+ {}^{p}\bm{f}_{p}
+ -\sum_{c\in\mathcal{C}_{p}}{}^{p}\bm{R}_{c}{}^{c}\bm{f}_{c}
+ +\sum_{i\in\mathcal{E}_{p}}{}^{p}\bm{f}_{i}
+ \\
+&{}^{p}\bar{\bm{n}}_{p}=
+ {}^{p}\bm{n}_{p}
+ -\sum_{c\in\mathcal{C}_{p}}
+  ({}^{p}\bm{p}_{c}\times{}^{p}\bm{R}_{c}{}^{c}\bm{f}_{c}+{}^{p}\bm{R}_{c}{}^{c}\bm{n}_{c})
+ +\sum_{i\in\mathcal{E}_{p}}
+  ({}^{p}\bm{p}_{i}\times{}^{p}\bm{f}_{i}+{}^{p}\bm{n}_{i})
+\end{cases} \nonumber \\
+\Leftrightarrow\quad&
+\left[\begin{array}{@{}c@{}}
+ {}^{p}\bar{\bm{f}}_{p} \\ {}^{p}\bar{\bm{n}}_{p}
+\end{array}\right]
+=\left[\begin{array}{@{}c@{}}
+  {}^{p}\bm{f}_{p} \\ {}^{p}\bm{n}_{p}
+ \end{array}\right]
+-\sum_{c\in\mathcal{C}_{p}}
+ \left[\begin{array}{@{}cc@{}}
+  {}^{p}\bm{R}_{c} & \bm{O} \\
+  {}^{p}\bm{p}_{c}\times{}^{p}\bm{R}_{c} & {}^{p}\bm{R}_{c}
+ \end{array}\right]
+ \left[\begin{array}{@{}c@{}}
+  {}^{c}\bm{f}_{c} \\ {}^{c}\bm{n}_{c}
+ \end{array}\right]
++\sum_{i\in\mathcal{E}_{p}}
+ \left[\begin{array}{@{}cc@{}}
+  \bm{1} & \bm{O} \\
+  {}^{p}\bm{p}_{i}\times & \bm{1}
+ \end{array}\right]
+ \left[\begin{array}{@{}c@{}}
+  {}^{p}\bm{f}_{i} \\ {}^{p}\bm{n}_{i}
+ \end{array}\right]
+\label{eq:force}
+\end{align}
+と表せます．
+ただし，$\mathcal{C}_{p}$はリンク$p$の子リンクのインデックスの集合，
+$\mathcal{E}_{p}$はリンク$p$に直接作用する外力のインデックスの集合
+です．
+
+\subsection{関節の運動・関節トルク}
+
+%固定関節，回転関節，直動関節，円筒関節，自在継手，球面関節，浮遊関節の
+%7種類を考える．
+リンク$c$をリンク$p$につなぐ関節$c$の変位を$\bm{q}_{c}$，
+駆動力を$\bm{u}_{c}$，拘束力を$\bm{\lambda}_{c}$とそれぞれおくと，
+\begin{align}
+\left[\begin{array}{@{}c@{}}
+  {}^{p}\bm{R}_{c}^{\mathrm{T}}{}^{p}\dot{\bm{p}}_{c} \\
+  {}^{p}\bm{R}_{c}^{\mathrm{T}}{}^{p}\bm{\omega}_{c}
+ \end{array}\right]
+ &={}^{c}\bm{H}_{Jc}\dot{\bm{q}}_{c} \\
+\left[\begin{array}{@{}c@{}}
+  {}^{p}\bm{R}_{c}^{\mathrm{T}}{}^{p}\ddot{\bm{p}}_{c} \\
+  {}^{p}\bm{R}_{c}^{\mathrm{T}}{}^{p}\dot{\bm{\omega}}_{c}
+ \end{array}\right]
+ &={}^{c}\bm{H}_{Jc}\ddot{\bm{q}}_{c}+{}^{c}\dot{\bm{H}}_{Jc}\dot{\bm{q}}_{c} \\
+\left[\begin{array}{@{}c@{}}
+  {}^{c}\bm{f}_{c} \\ {}^{c}\bm{n}_{c}
+ \end{array}\right]
+ &={}^{c}\bm{H}_{Jc}\bm{u}_{c}+{}^{c}\bm{H}_{Cc}\bm{\lambda}_{c}
+ \label{eq:j_force}
+\end{align}
+のように表せる．
+ただし，
+\begin{align}
+{}^{c}\bm{H}_{Jc}=\begin{cases}
+\mbox{(void)} & \mbox{(固定関節)} \\
+\left[\begin{array}{@{}c@{}} \bm{0} \\ \hat{\bm{z}} \end{array}\right] & \mbox{(回転関節)} \\
+\left[\begin{array}{@{}c@{}} \hat{\bm{z}} \\ \bm{0} \end{array}\right] & \mbox{(直動関節)} \\
+\left[\begin{array}{@{}cc@{}}
+ \hat{\bm{z}} & \bm{0} \\
+ \bm{0} & \hat{\bm{z}} \\
+ \end{array}\right] & \mbox{(円筒関節)} \\
+\left[\begin{array}{@{}cc@{}}
+ \bm{0} & \bm{0} \\
+ -\sin q_{2}\hat{\bm{x}}+ \cos q_{2}\hat{\bm{z}} & \hat{\bm{y}} \\
+ \end{array}\right] & \mbox{(自在継手)} \\
+\left[\begin{array}{@{}cc@{}} \bm{O} & \bm{1} \end{array}\right]^{\mathrm{T}} & \mbox{(球面関節)} \\
+\bm{1} & \mbox{(浮遊関節)}
+\end{cases}
+,\quad
+{}^{c}\bm{H}_{Cc}=\begin{cases}
+\bm{1} & \mbox{(固定関節)} \\
+\left[\begin{array}{@{}cccc@{}}
+ \bm{1} & \bm{0} & \bm{0} \\
+ \bm{O} & \hat{\bm{x}} & \hat{\bm{y}}
+ \end{array}\right] & \mbox{(回転関節)} \\
+\left[\begin{array}{@{}cccc@{}}
+ \hat{\bm{x}} & \hat{\bm{y}} & \bm{O} \\
+ \bm{0} & \bm{0} & \bm{1}
+ \end{array}\right] & \mbox{(直動関節)} \\
+\left[\begin{array}{@{}cccc@{}}
+ \hat{\bm{x}} & \hat{\bm{y}} & \bm{0} & \bm{0} \\
+ \bm{0} & \bm{0} & \hat{\bm{x}} & \hat{\bm{y}}
+ \end{array}\right] & \mbox{(円筒関節)} \\
+\left[\begin{array}{@{}cc@{}}
+ \bm{1} & \bm{0} \\
+ \bm{O} & \cos q_{2}\hat{\bm{x}}+\sin q_{2}\hat{\bm{z}}
+ \end{array}\right] & \mbox{(自在継手)} \\
+\left[\begin{array}{@{}cc@{}} \bm{1} & \bm{O} \end{array}\right]^{\mathrm{T}} & \mbox{(球面関節)} \\
+\mbox{(void)} & \mbox{(浮遊関節)}
+\end{cases}
+\end{align}
+あきらかに，
+\begin{align}
+{}^{c}\bm{H}_{Jc}^{\mathrm{T}}{}^{c}\bm{H}_{Jc}=\bm{1},\quad
+{}^{c}\bm{H}_{Cc}^{\mathrm{T}}{}^{c}\bm{H}_{Cc}=\bm{1},\quad
+{}^{c}\bm{H}_{Jc}^{\mathrm{T}}{}^{c}\bm{H}_{Cc}=\bm{O}
+\label{eq:j_ortho}
+\end{align}
+が成り立つ．
+また，自在継手においてのみ，
+\begin{align}
+{}^{c}\dot{\bm{H}}_{Jc}\dot{\bm{q}}
+=\dot{q}_{1}\dot{q}_{2}\left[\begin{array}{@{\,}c@{\,}}
+ \bm{0} \\ -\cos q_{2} \\ 0 \\ -\sin q_{2}
+\end{array}\right]
+\end{align}
+となる．
+
+
+\subsection{まとめ}
+以上をまとめると，
+\begin{align}
+{}^{c}\bm{a}_{c}&=
+{}^{p}\bm{J}_{c}^{\mathrm{T}}{}^{p}\bm{a}_{p}+{}^{c}\bar{\bm{a}}_{p}
++{}^{c}\bm{H}_{Jc}\ddot{\bm{q}}_{c}
+\tag{\ref{eq:acc}} \\
+{}^{i}\bm{M}_{i}{}^{i}\bm{a}_{i}+{}^{i}\bm{b}_{i}&=
+{}^{i}\bar{\bm{\tau}}_{i}
+\tag{\ref{eq:eqm}} \\
+{}^{p}\bar{\bm{\tau}}_{p}&=
+ {}^{p}\bm{\tau}_{p}
+ -\sum_{c\in\mathcal{C}_{p}}{}^{p}\bm{J}_{c}{}^{c}\bm{\tau}_{c}
+ +\sum_{i\in\mathcal{E}_{p}}{}^{p}\bm{K}_{i}{}^{p}\bm{\tau}_{i}
+\tag{\ref{eq:force}} \\
+{}^{i}\bm{\tau}_{i}&=
+ {}^{i}\bm{H}_{Ji}\bm{u}_{i}+{}^{i}\bm{H}_{Ci}\bm{\lambda}_{i}
+\tag{\ref{eq:j_force}}
+\end{align}
+および式(\ref{eq:j_ortho})で全てのリンク・関節の運動と力の関係が記述される．
+ただし，
+\begin{align}
+{}^{c}\bm{a}_{c}&\equiv\left[\begin{array}{@{}c@{}}
+ {}^{c}\hat{\bm{a}}_{c} \\ {}^{c}\hat{\bm{\alpha}}_{c}
+ \end{array}\right] \\
+{}^{p}\bm{J}_{c}&\equiv\left[\begin{array}{@{}cc@{}}
+ {}^{p}\bm{R}_{c} & \bm{O} \\
+ {}^{p}\bm{p}_{c}\times{}^{p}\bm{R}_{c} & {}^{p}\bm{R}_{c}
+ \end{array}\right]
+=\left[\begin{array}{@{}cc@{}}
+ \bm{1} & \bm{O} \\
+ {}^{p}\bm{p}_{c}\times & \bm{1}
+ \end{array}\right]\left[\begin{array}{@{}cc@{}}
+ {}^{p}\bm{R}_{c} & \bm{O} \\
+ \bm{O} & {}^{p}\bm{R}_{c}
+ \end{array}\right] \\
+{}^{c}\bar{\bm{a}}_{p}&\equiv\left[\begin{array}{@{}cc@{}}
+ {}^{p}\bm{R}_{c}^{\mathrm{T}} & \bm{O} \\
+ \bm{O} & {}^{p}\bm{R}_{c}^{\mathrm{T}}
+ \end{array}\right]
+\left[\begin{array}{@{}c@{}}
+ {}^{p}\hat{\bm{\omega}}_{p}\times({}^{p}\hat{\bm{\omega}}_{p}\times{}^{p}\bm{p}_{c}) \\
+  \bm{0}
+ \end{array}\right]
++\left[\begin{array}{@{}cc@{}}
+  2\,({}^{p}\bm{R}_{c}^{\mathrm{T}}{}^{p}\hat{\bm{\omega}}_{p})\times & \bm{O} \\
+  \bm{O} & ({}^{p}\bm{R}_{c}^{\mathrm{T}}{}^{p}\hat{\bm{\omega}}_{p})\times
+ \end{array}\right]
+ {}^{c}\bm{H}_{Jc}\dot{\bm{q}}_{c}+{}^{c}\dot{\bm{H}}_{Jc}\dot{\bm{q}}_{c}
+ \\
+{}^{i}\bm{M}_{i}&\equiv\left[\begin{array}{@{}cc@{}}
+ m_{i}\bm{1} & -m_{i}{}^{i}\bm{p}_{Gi}\times \\
+ m_{i}{}^{i}\bm{p}_{Gi}\times & {}^{i}\bar{\bm{I}}_{i}
+ \end{array}\right] \\
+{}^{i}\bm{b}_{i}&\equiv\left[\begin{array}{@{}c@{}}
+ m_{i}{}^{i}\hat{\bm{\omega}}_{i}\times({}^{i}\hat{\bm{\omega}}_{i}\times{}^{i}\bm{p}_{Gi}) \\
+ {}^{i}\hat{\bm{\omega}}_{i}\times{}^{i}\bar{\bm{I}}_{i}{}^{i}\hat{\bm{\omega}}_{i}
+ \end{array}\right] \\
+{}^{i}\bar{\bm{I}}_{i}&\equiv
+ {}^{i}\bm{I}_{i}-m_{i}{}^{i}\bm{p}_{Gi}\times^{2}
+ \tag{\ref{eq:inertia_origin}} \\
+{}^{i}\bar{\bm{\tau}}_{i}&\equiv\left[\begin{array}{@{}c@{}}
+ {}^{i}\bar{\bm{f}}_{i} \\ {}^{i}\bar{\bm{n}}_{i}
+ \end{array}\right] \\
+{}^{p}\bm{K}_{i}&\equiv\left[\begin{array}{@{}cc@{}}
+ \bm{1} & \bm{O} \\
+ {}^{p}\bm{p}_{i}\times & \bm{1}
+ \end{array}\right] \\
+{}^{i}\bm{\tau}_{i}&\equiv\left[\begin{array}{@{}c@{}}
+  {}^{i}\bm{f}_{i} \\ {}^{i}\bm{n}_{i}
+ \end{array}\right] \\
+{}^{p}\bm{\tau}_{i}&\equiv\left[\begin{array}{@{}c@{}}
+  {}^{p}\bm{f}_{i} \\ {}^{p}\bm{n}_{i}
+ \end{array}\right]
+\end{align}
+
+
+
+\section{多節体慣性法による再帰的順動力学計算 (by Featherstone)}
+
+%%\subsection{多節体慣性法 (by Featherstone)}
+
+あるリンク$p$の子リンクの一つ$c$の関節の運動が，
+次式のような形で表されるとする．
+\begin{align}
+{}^{c}\bm{M}^{A}_{c}{}^{c}\bm{a}_{c}+{}^{c}\bm{b}^{A}_{c}
+ &={}^{c}\bm{\tau}_{c}
+\label{eq:eqm_abi}
+\end{align}
+つまり，リンク$c$から末端に向かう部分構造が，
+あたかも一つのリンクであるかのように扱えるという仮定である．
+${}^{c}\bm{M}^{A}_{c}$と${}^{c}\bm{b}^{A}_{c}$はそれぞれ，
+その部分構造の合成された慣性および非線形力のようなもので，
+この部分構造をなすリンク間に働く${}^{c}\bm{\tau}_{c}$以外の全ての力を
+内包する．
+${}^{c}\bm{M}^{A}_{c}$を多節体慣性，
+${}^{c}\bm{b}^{A}_{c}$を多節体バイアス力と呼ぶ．
+
+
+Eq.(\ref{eq:acc})(\ref{eq:eqm_abi})(\ref{eq:j_force})より，
+\begin{align}
+{}^{c}\bm{M}^{A}_{c}
+({}^{p}\bm{J}_{c}^{\mathrm{T}}{}^{p}\bm{a}_{p}+{}^{c}\bar{\bm{a}}_{p}
++{}^{c}\bm{H}_{Jc}\ddot{\bm{q}}_{c})
++{}^{c}\bm{b}^{A}_{c}=
+{}^{c}\bm{H}_{Jc}\bm{u}_{c}+{}^{c}\bm{H}_{Cc}\bm{\lambda}_{c}
+\label{eq:eqm_abi_force_decomp}
+\end{align}
+両辺に左から${}^{c}\bm{H}_{Jc}^{\mathrm{T}}$をかければ，
+Eq.(\ref{eq:j_ortho})より，
+\begin{align}
+&{}^{c}\bm{H}_{Jc}^{\mathrm{T}}{}^{c}\bm{M}^{A}_{c}
+({}^{p}\bm{J}_{c}^{\mathrm{T}}{}^{p}\bm{a}_{p}+{}^{c}\bar{\bm{a}}_{p}
++{}^{c}\bm{H}_{Jc}\ddot{\bm{q}}_{c})
+ +{}^{c}\bm{H}_{Jc}^{\mathrm{T}}{}^{c}\bm{b}^{A}_{c}=\bm{u}_{c} \nonumber \\
+\Leftrightarrow\quad&
+\ddot{\bm{q}}_{c}
+=\left({}^{c}\bm{H}_{Jc}^{\mathrm{T}}{}^{c}\bm{M}^{A}_{c}{}^{c}\bm{H}_{Jc}\right)^{-1}
+\left\{\bm{u}_{c}
+ -{}^{c}\bm{H}_{Jc}^{\mathrm{T}}\left({}^{c}\bm{M}^{A}_{c}
+  ({}^{p}\bm{J}_{c}^{\mathrm{T}}\textcolor{red}{{}^{p}\bm{a}_{p}}+{}^{c}\bar{\bm{a}}_{p})
+  +{}^{c}\bm{b}^{A}_{c}\right)
+\right\}
+\label{eq:recurs_acc}
+\end{align}
+よって，
+{\bf リンク$p$の6自由度加速度\textcolor{red}{${}^{p}\bm{a}_{p}$}が既知ならば
+$\ddot{\bm{q}}_{c}$が求まる．}
+問題は，
+${}^{c}\bm{M}^{A}_{c}$と${}^{c}\bm{b}^{A}_{c}$の求め方である．
+
+簡単のため，木構造開リンク系を考える．
+Eq.(\ref{eq:recurs_acc})をEq.(\ref{eq:eqm_abi_force_decomp})に代入すると，
+\begin{align}
+&{}^{c}\bm{M}^{A}_{c}
+\left[
+ {}^{p}\bm{J}_{c}^{\mathrm{T}}\textcolor{red}{{}^{p}\bm{a}_{p}}+{}^{c}\bar{\bm{a}}_{p}
++{}^{c}\bm{H}_{Jc}
+ \left({}^{c}\bm{H}_{Jc}^{\mathrm{T}}{}^{c}\bm{M}^{A}_{c}{}^{c}\bm{H}_{Jc}\right)^{-1}
+\left\{\bm{u}_{c}
+ -{}^{c}\bm{H}_{Jc}^{\mathrm{T}}
+  \left({}^{c}\bm{M}^{A}_{c}({}^{p}\bm{J}_{c}^{\mathrm{T}}\textcolor{red}{{}^{p}\bm{a}_{p}}+{}^{c}\bar{\bm{a}}_{p})
+  +{}^{c}\bm{b}^{A}_{c}\right)
+\right\}
+\right]
++{}^{c}\bm{b}^{A}_{c}
+ ={}^{c}\bm{\tau}_{c}
+ \nonumber \\
+&\hskip6cm\Leftrightarrow\qquad
+{}^{c}\overline{\bm{M}}^{A}_{c}\,{}^{p}\bm{J}_{c}^{\mathrm{T}}\textcolor{red}{{}^{p}\bm{a}_{p}}+{}^{c}\bm{b}^{A}_{p}
+ ={}^{c}\bm{\tau}_{c}
+\label{eq:eqm_abi_child}
+\end{align}
+を得る．ただし，
+\begin{align}
+{}^{c}\overline{\bm{M}}^{A}_{c}
+&\equiv {}^{c}\bm{M}^{A}_{c}-{}^{c}\bm{D}_{c}{}^{c}\bm{B}_{c}
+\label{eq:abi_child}
+\\
+{}^{c}\bm{D}_{c}
+&\equiv {}^{c}\bm{M}^{A}_{c} {}^{c}\bm{H}_{Jc}
+\\
+{}^{c}\bm{B}_{c}
+&\equiv {{}^{c}\bm{V}_{c}}^{-1} {}^{c}\bm{D}_{c}^{\mathrm{T}}
+\\
+{}^{c}\bm{V}_{c}
+&\equiv {}^{c}\bm{H}_{Jc}^{\mathrm{T}}{}^{c}\bm{M}^{A}_{c}{}^{c}\bm{H}_{Jc}
+\\
+{}^{c}\bm{b}^{A}_{p}
+&\equiv {}^{c}\bar{\bm{b}}^{A}_{p}-{}^{c}\bm{D}_{c} {}^{c}\bm{s}_{p}
+\label{eq:abb_child}
+\\
+{}^{c}\bar{\bm{b}}^{A}_{p}
+&\equiv {}^{c}\bm{M}^{A}_{c}{}^{c}\bar{\bm{a}}_{p} + {}^{c}\bm{b}^{A}_{c}
+\\
+{}^{c}\bm{s}_{p}
+&\equiv
+{{}^{c}\bm{V}_{c}}^{-1}(\bm{u}_{c}-{}^{c}\bm{H}_{Jc}^{\mathrm{T}}{}^{c}\bar{\bm{b}}^{A}_{p})
+\label{eq:abb_last}
+\end{align}
+%
+Eq.(\ref{eq:eqm})(\ref{eq:force})(\ref{eq:eqm_abi_child})より，
+\begin{align}
+&{}^{p}\bm{M}_{p}\textcolor{red}{{}^{p}\bm{a}_{p}}+{}^{p}\bm{b}_{p}
+={}^{p}\bm{\tau}_{p}
+ -\sum_{c\in\mathcal{C}_{p}}
+ {}^{p}\bm{J}_{c} \left({}^{c}\overline{\bm{M}}^{A}_{c}\,{}^{p}\bm{J}_{c}^{\mathrm{T}}\textcolor{red}{{}^{p}\bm{a}_{p}}+{}^{c}\bm{b}^{A}_{p}\right)
+ +\sum_{i\in\mathcal{E}_{p}}{}^{p}\bm{K}_{i}{}^{p}\bm{\tau}_{i}
+\nonumber \\
+&\hskip2.6cm\Leftrightarrow\qquad
+{}^{p}\bm{M}^{A}_{p}\textcolor{red}{{}^{p}\bm{a}_{p}}+{}^{p}\bm{b}^{A}_{p}
+ ={}^{p}\bm{\tau}_{p}
+\end{align}
+を得る．ただし，
+\begin{align}
+{}^{p}\bm{M}^{A}_{p}
+&\equiv {}^{p}\bm{M}_{p}
+ +\sum_{c\in\mathcal{C}_{p}} {}^{p}\bm{J}_{c}{}^{c}\overline{\bm{M}}^{A}_{c}{}^{p}\bm{J}_{c}^{\mathrm{T}}
+\label{eq:abi_node} \\
+{}^{p}\bm{b}^{A}_{p}
+&\equiv
+ {}^{p}\bm{b}_{p}
+ +\sum_{c\in\mathcal{C}_{p}} {}^{p}\bm{J}_{c}{}^{c}\bm{b}^{A}_{p}
+ -\sum_{i\in\mathcal{E}_{p}}{}^{p}\bm{K}_{i}{}^{p}\bm{\tau}_{i}
+\label{eq:abb_node}
+\end{align}
+さらに，Eq.(\ref{eq:recurs_acc})は次のように書き換えられる．
+\begin{align}
+\ddot{\bm{q}}_{c}={}^{c}\bm{s}_{p}-{}^{c}\bm{B}_{c}{}^{p}\bm{J}_{c}^{\mathrm{T}}\textcolor{red}{{}^{p}\bm{a}_{p}}
+\label{eq:recurs_acc_re}
+\end{align}
+
+以上より，多節体慣性法に基づく順動力学計算アルゴリズムは
+\textbf{Algorithm 1}のようになる．
+
+\begin{algorithm}
+\caption{多節体慣性法による順動力学計算}
+\begin{algorithmic}[1]
+\Procedure{ForwardDynamicsABI}{リンク$1\sim N$} \Comment{多節体慣性法による順動力学計算}
+\State \textsc{BackwardABI}(1) \Comment{多節体慣性の計算}
+\State 
+重力下ならば${}^{0}\bm{a}_{0}=[\bm{g}^{\mathrm{T}}~\bm{0}^{\mathrm{T}}]^{\mathrm{T}}$，
+無重力下ならば${}^{0}\bm{a}_{0}=\bm{0}$とする．
+\State \textsc{ForwardABI}(1,${}^{0}\bm{a}_{0}$) \Comment{加速度の計算}
+\EndProcedure
+\Statex
+\Procedure{BackwardABI}{$i$} \Comment{多節体慣性・多節体バイアス力の計算}
+\For{$c\in\mathcal{C}_{i}$}
+  \State \textsc{BackwardABI}($c$) \Comment{再帰的に子リンクの多節体慣性・多節体バイアスを計算}
+\EndFor
+\State Eq.(\ref{eq:abi_node})(\ref{eq:abb_node})より
+${}^{i}\bm{M}^{A}_{i}$，${}^{i}\bm{b}^{A}_{i}$を計算．
+\State Eq.(\ref{eq:abi_child})$\sim$(\ref{eq:abb_last})より
+${}^{i}\overline{\bm{M}}^{A}_{i}$，${}^{i}\bm{b}^{A}_{p}$を計算．
+\EndProcedure
+\Statex
+\Procedure{ForwardABI}{$i$,${}^{p}\bm{a}_{p}$} \Comment{関節加速度・リンク加速度の計算}
+\State ${}^{p}\bm{a}_{p}$，Eq.(\ref{eq:recurs_acc_re})より加速度$\ddot{\bm{q}}_{i}$を求める．
+\State Eq.(\ref{eq:acc})より${}^{i}\bm{a}_{i}$を求める．
+\For{$c\in\mathcal{C}_{i}$}
+  \State \textsc{ForwardABI}($c$,${}^{i}\bm{a}_{i}$) \Comment{再帰的に子リンクの加速度を計算}
+\EndFor
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+
+
+
+%% \subsection{多節体逆慣性に基づく組立分解法 (by Yamane)}
+
+%% あるリンク$p$の子リンクの一つ$c$の関節の運動が，
+%% 次式のような形で表されるとする．
+%% \begin{align}
+%% {}^{c}\bm{a}_{c}
+%%  &={}^{c}\bm{\Phi}^{A}_{c}{}^{c}\bm{\tau}_{c}+{}^{c}\bm{\beta}^{A}_{c}
+%% \label{eq:eqm_iabi}
+%% \end{align}
+%% これはEq.(\ref{eq:eqm_abi})を${}^{c}\bm{a}_{c}$について解き直しただけであるが，
+%% 力から加速度への逆写像となっている．
+%% ${}^{c}\bm{\Phi}^{A}_{c}$を多節体逆慣性，
+%% ${}^{c}\bm{\beta}^{A}_{c}$を多節体バイアス加速度と呼ぶ．
+%% この表記に従えば，Eq.(\ref{eq:eqm})も次のように書き直せる．
+%% \begin{align}
+%% {}^{i}\bm{a}_{i}=
+%% {}^{i}\bm{\Phi}_{i}{}^{i}\bar{\bm{\tau}}_{i}+{}^{i}\bm{\beta}_{i}
+%% \label{eq:ieqm}
+%% \end{align}
+%% 明らかに，
+%% \begin{align}
+%% {}^{i}\bm{\Phi}_{i}&={}^{i}\bm{M}_{i}^{-1}
+%%  \label{eq:ii} \\
+%% {}^{i}\bm{\beta}_{i}&=-{}^{i}\bm{M}_{i}^{-1}
+%% \left({}^{i}\bm{b}_{i}-\sum_{j\in\mathcal{E}_{i}}{}^{i}\bm{K}_{j}{}^{j}\bm{\tau}_{j}\right)
+%%  \label{eq:ib}
+%% \end{align}
+%% である．
+%% 多節体慣性について考えたときと同様に，
+%% Eq.(\ref{eq:acc})(\ref{eq:eqm_iabi})(\ref{eq:j_force})より，
+%% \begin{align}
+%% \tr{{}^{p}\bm{J}_{c}}{}^{p}\bm{a}_{p}+{}^{c}\bar{\bm{a}}_{p}
+%%  +{}^{c}\bm{H}_{Jc}\ddot{\bm{q}}_{c}
+%% =
+%% {}^{c}\bm{\Phi}^{A}_{c}
+%% ({}^{c}\bm{H}_{Jc}\bm{u}_{c}+{}^{c}\bm{H}_{Cc}\bm{\lambda}_{c})
+%% +{}^{c}\bm{\beta}^{A}_{c}
+%% \label{eq:eqm_iabi_force_decomp}
+%% \end{align}
+%% さらにEq.(\ref{eq:j_ortho})より，
+%% \begin{align}
+%% &\tr{{}^{c}\bm{H}_{Cc}}
+%%  (\tr{{}^{p}\bm{J}_{c}}{}^{p}\bm{a}_{p}+{}^{c}\bar{\bm{a}}_{p})
+%% =\tr{{}^{c}\bm{H}_{Cc}}{}^{c}\bm{\Phi}^{A}_{c}
+%% ({}^{c}\bm{H}_{Jc}\bm{u}_{c}+{}^{c}\bm{H}_{Cc}\bm{\lambda}_{c})
+%% +\tr{{}^{c}\bm{H}_{Cc}}{}^{c}\bm{\beta}^{A}_{c}
+%%  \nonumber \\
+%% \Leftrightarrow\quad&
+%% \bm{\lambda}_{c}
+%% =
+%% \left(\tr{{}^{c}\bm{H}_{Cc}}{}^{c}\bm{\Phi}^{A}_{c}{}^{c}\bm{H}_{Cc}\right)^{-1}
+%% \tr{{}^{c}\bm{H}_{Cc}}
+%%  (\tr{{}^{p}\bm{J}_{c}}\underbrace{{}^{p}\bm{a}_{p}}_{\mathrm{unknown}}+{}^{c}\bar{\bm{a}}_{p}
+%%  -{}^{c}\bm{\Phi}^{A}_{c}{}^{c}\bm{H}_{Jc}\bm{u}_{c}
+%%  -{}^{c}\bm{\beta}^{A}_{c})
+%% \label{eq:recurs_force}
+%% \end{align}
+%% よってこの場合は，
+%% {\bf リンク$p$の6自由度加速度${}^{p}\bm{a}_{p}$が既知ならば
+%% 拘束力$\bm{\lambda}_{c}$が求まる．}
+%% 全てのリンクに働く拘束力$\bm{\lambda}_{i}$($i=1\sim N$)が求まれば，
+%% Eq.(\ref{eq:j_force})より${}^{i}\bm{\tau}_{i}$が，
+%% さらにEq.(\ref{eq:force})より${}^{i}\bar{\bm{\tau}}_{i}$が求まる．
+%% Eq.(\ref{eq:acc})(\ref{eq:ieqm})より，
+%% \begin{align}
+%% \tr{{}^{p}\bm{J}_{c}}{}^{p}\bm{a}_{p}+{}^{c}\bar{\bm{a}}_{p}
+%% +{}^{c}\bm{H}_{Jc}\ddot{\bm{q}}_{c}
+%% ={}^{c}\bm{\Phi}_{c}{}^{c}\bar{\bm{\tau}}_{c}+{}^{c}\bm{\beta}_{c}
+%% \end{align}
+%% さらにEq.(\ref{eq:j_ortho})より，
+%% \begin{align}
+%% \ddot{\bm{q}}_{c}
+%% =\tr{{}^{c}\bm{H}_{Jc}}
+%%  ({}^{c}\bm{\Phi}_{c}{}^{c}\bar{\bm{\tau}}_{c}+{}^{c}\bm{\beta}_{c}
+%%  -\tr{{}^{p}\bm{J}_{c}}{}^{p}\bm{a}_{p}-{}^{c}\bar{\bm{a}}_{p})
+%% \end{align}
+%% となって，加速度$\ddot{\bm{q}}_{c}$が求まる．
+%% ここにおいて問題は，
+%% ${}^{c}\bm{\Phi}^{A}_{c}$と${}^{c}\bm{\beta}^{A}_{c}$の求め方となる．
+
+%% リンク$i$が末端リンクならば，
+%% Eq.(\ref{eq:ii})(\ref{eq:ib})より
+%% \begin{align}
+%% {}^{c}\bm{\Phi}^{A}_{c}&={}^{c}\bm{\Phi}_{c} \\
+%% {}^{c}\bm{\beta}^{A}_{c}&={}^{c}\bm{\beta}_{c}
+%% \end{align}
+%% である．
+
+
+%% \section{力積・速度の次元で考える再帰的順動力学計算}
+
+%% Eq.(\ref{eq:lin_vel})(\ref{eq:ang_vel})を再掲する．
+%% \begin{align}
+%% \dot{\bm{p}}_{c}&=\dot{\bm{p}}_{p}
+%%  +\bm{\omega}_{p}\times\bm{R}_{p}{}^{p}\bm{p}_{c}
+%%  +\bm{R}_{p}{}^{p}\dot{\bm{p}}_{c}
+%% \tag{\ref{eq:lin_vel}} \\
+%% \bm{\omega}_{c}&=\bm{\omega}_{p}+\bm{R}_{p}{}^{p}\bm{\omega}_{c}
+%% \tag{\ref{eq:ang_vel}}
+%% \end{align}
+%% それぞれ姿勢変換すれば，次式を得る．
+%% \begin{align}
+%% &\begin{cases}
+%% &{}^{c}\hat{\bm{v}}_{c}=\tr{{}^{p}\bm{R}_{c}}
+%%  ({}^{p}\hat{\bm{v}}_{p}
+%%  +{}^{p}\hat{\bm{\omega}}_{p}\times{}^{p}\bm{p}_{c}
+%%  +{}^{p}\dot{\bm{p}}_{c}) \\
+%% &{}^{c}\hat{\bm{\omega}}_{c}=\tr{{}^{p}\bm{R}_{c}}
+%%  ({}^{p}\hat{\bm{\omega}}_{p}+{}^{p}\bm{\omega}_{c})
+%% \end{cases} \nonumber \\
+%% \Leftrightarrow\quad&
+%% \left[\begin{array}{@{}c@{}}
+%%  {}^{c}\hat{\bm{v}}_{c} \\ {}^{c}\hat{\bm{\omega}}_{c}
+%% \end{array}\right]
+%% =
+%% \left[\begin{array}{@{}cc@{}}
+%%  \tr{{}^{p}\bm{R}_{c}} & -\tr{{}^{p}\bm{R}_{c}}{}^{p}\bm{p}_{c}\times \\
+%%  \bm{O} & \tr{{}^{p}\bm{R}_{c}}
+%% \end{array}\right]
+%%  \left[\begin{array}{@{}c@{}}
+%%   {}^{p}\hat{\bm{v}}_{p} \\ {}^{p}\hat{\bm{\omega}}_{p}
+%%  \end{array}\right]
+%%  +\left[\begin{array}{@{}c@{}}
+%%   \tr{{}^{p}\bm{R}_{c}}{}^{p}\dot{\bm{p}}_{c} \\
+%%   \tr{{}^{p}\bm{R}_{c}}{}^{p}\bm{\omega}_{c}
+%%  \end{array}\right]
+%% \quad\Leftrightarrow\quad
+%% {}^{c}\bm{v}_{c}=
+%% \tr{{}^{p}\bm{J}_{c}}{}^{p}\bm{v}_{p}+{}^{c}\bm{H}_{Jc}\dot{\bm{q}}_{c}
+%% \label{eq:vel}
+%% \end{align}
+%% ただし，
+%% \begin{align}
+%% {}^{c}\bm{v}_{c}&\equiv\left[\begin{array}{@{}c@{}}
+%%  {}^{c}\hat{\bm{v}}_{c} \\ {}^{c}\hat{\bm{\omega}}_{c}
+%%  \end{array}\right]
+%% \end{align}
+
+
+%% Eq.(\ref{eq:eqm})は，次のように書き改められる．
+%% \begin{align}
+%% \frac{\zod}{\zod t}
+%% \left[\begin{array}{@{}cc@{}}
+%% m_{i}\bm{1} & -m_{i}{}^{i}\bm{p}_{Gi}\times \\
+%% m_{i}{}^{i}\bm{p}_{Gi}\times & {}^{i}\bar{\bm{I}}_{i}
+%% \end{array}\right]
+%% \left[\begin{array}{@{}c@{}}
+%%  {}^{i}\hat{\bm{v}}_{i} \\ {}^{i}\hat{\bm{\omega}}_{i}
+%% \end{array}\right]
+%% =
+%% \left[\begin{array}{@{}c@{}}
+%%  {}^{i}\bar{\bm{f}}_{i} \\ {}^{i}\bar{\bm{n}}_{i}
+%% \end{array}\right]
+%% \quad\Leftrightarrow\quad
+%% \frac{\zod}{\zod t}
+%% ({}^{i}\bm{M}_{i}\,{}^{i}\bm{v}_{i})={}^{i}\bar{\bm{\tau}}_{i}
+%% \label{eq:eqm_impulse}
+%% \end{align}
+
+%微小時間$\zdelta t$の間に
+
+
+\end{document}

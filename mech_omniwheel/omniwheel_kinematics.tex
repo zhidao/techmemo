@@ -1,0 +1,266 @@
+﻿\documentclass[a4paper]{jsarticle}
+\usepackage[dvips]{graphicx}
+\usepackage{svg}
+\usepackage{amsmath,amssymb,bm}
+
+\flushbottom
+\sloppy
+
+\setlength{\paperwidth}{210mm}
+\setlength{\paperheight}{297mm}
+\setlength{\voffset}{0mm}
+\setlength{\hoffset}{0mm}
+\setlength{\textwidth}{\paperwidth}
+\addtolength{\textwidth}{-30mm}
+\setlength{\textheight}{\paperheight}
+\addtolength{\textheight}{-40mm}
+\setlength{\topmargin}{-1in}
+\addtolength{\topmargin}{20mm}
+\setlength{\headheight}{0mm}
+\setlength{\headsep}{0mm}
+\setlength{\footskip}{10mm}
+\setlength{\oddsidemargin}{-1in}
+\addtolength{\oddsidemargin}{15mm}
+\setlength{\columnsep}{7mm}
+
+\everymath{\displaystyle}
+
+\title{\bf {\LARGE 球状全方位車輪の運動学/力学}}
+\author{杉原知道}
+
+\begin{document}
+
+%\section{運動学}
+
+\begin{figure}[h]
+\begin{center}
+\includesvg[height=.3\textheight]{omniball_kinematics.svg}
+\label{fig:omniball_kinematics}
+\caption{球状全方位車輪の運動学}
+\end{center}
+\end{figure}
+
+台車座標系における球状車輪$i$（$i=1,2,3,4$）の水平面内中心位置ベクトルを$\bm{s}_{i}$，
+駆動輪および受動輪の回転軸方向単位ベクトルを$\hat{\bm{z}}_{\mathrm{D}i}$，$\hat{\bm{z}}_{\mathrm{P}i}$とそれぞれおく．
+配置および各動輪の回転正方向が図\ref{fig:omniball_kinematics}のようであるならば，
+\begin{align*}
+& \bm{s}_{1}=\begin{bmatrix} R \\ -R \end{bmatrix}, &
+& \hat{\bm{z}}_{\mathrm{D}1}=\frac{1}{\sqrt{2}}\begin{bmatrix}-1 \\ 1 \end{bmatrix}, &
+& \hat{\bm{z}}_{\mathrm{P}1}=\frac{1}{\sqrt{2}}\begin{bmatrix} 1 \\ 1 \end{bmatrix}
+\\
+& \bm{s}_{2}=\begin{bmatrix} R \\ R \end{bmatrix}, &
+& \hat{\bm{z}}_{\mathrm{D}2}=\frac{1}{\sqrt{2}}\begin{bmatrix}-1 \\ -1 \end{bmatrix}, &
+& \hat{\bm{z}}_{\mathrm{P}2}=\frac{1}{\sqrt{2}}\begin{bmatrix}-1 \\ 1 \end{bmatrix},
+\\
+& \bm{s}_{3}=\begin{bmatrix}-R \\ R \end{bmatrix}, &
+& \hat{\bm{z}}_{\mathrm{D}3}=\frac{1}{\sqrt{2}}\begin{bmatrix} 1 \\ -1 \end{bmatrix}, &
+& \hat{\bm{z}}_{\mathrm{P}3}=\frac{1}{\sqrt{2}}\begin{bmatrix}-1 \\ -1 \end{bmatrix},
+\\
+& \bm{s}_{4}=\begin{bmatrix}-R \\ -R \end{bmatrix}, &
+& \hat{\bm{z}}_{\mathrm{D}4}=\frac{1}{\sqrt{2}}\begin{bmatrix} 1 \\ 1 \end{bmatrix}, &
+& \hat{\bm{z}}_{\mathrm{P}4}=\frac{1}{\sqrt{2}}\begin{bmatrix} 1 \\ -1 \end{bmatrix},
+\end{align*}
+である．
+以下はこの配置を仮定する．
+
+球状車輪の半径を$r$，
+慣性系における台車座標系の並進速度を$\bm{v}_{\mathrm{B}}=[v_{\mathrm{B}x}~v_{\mathrm{B}y}]^{\mathrm{T}}$，
+旋回角速度を$\omega_{\mathrm{B}}$，
+車輪$i$の駆動輪回転速度を$\omega_{\mathrm{D}i}$，
+受動輪回転速度を$\omega_{\mathrm{P}i}$とそれぞれおこう．
+台車座標系の方位角は常に慣性系と一致しているとしても一般性を失わない．
+このとき，車輪$i$の水平面内中心（接触点）の速度$\bm{v}_{i}$は
+\begin{align*}
+\bm{v}_{i}
+=\bm{v}_{\mathrm{B}}
++\omega_{\mathrm{B}}\bm{s}_{i}^{\times}
++r\omega_{\mathrm{D}i}\hat{\bm{z}}_{\mathrm{D}i}^{\times}
++r\omega_{\mathrm{P}i}\hat{\bm{z}}_{\mathrm{P}i}^{\times}
+\end{align*}
+となる．
+ただし，任意の2次元ベクトル$\bm{a}=[a_{1}~a_{2}]^{\mathrm{T}}$に対し$\bm{a}^{\times}$を
+\begin{align*}
+\bm{a}^{\times}\overset{\mathrm{def}}{=}\begin{bmatrix} -a_{2} \\ a_{1} \end{bmatrix}
+\end{align*}
+と定義する．
+全ての車輪が地面に対し滑りなく転がると仮定すると，
+$\bm{v}_{i}=\bm{0}$であるから，
+\begin{align*}
+r\begin{bmatrix}
+ \hat{\bm{z}}_{\mathrm{D}i}^{\times} & \hat{\bm{z}}_{\mathrm{P}i}^{\times}
+\end{bmatrix}
+\begin{bmatrix}
+ \omega_{\mathrm{D}i} \\ \omega_{\mathrm{P}i}
+\end{bmatrix}
+=
+-\begin{bmatrix}
+ \bm{1} & \bm{s}_{i}^{\times}
+\end{bmatrix}
+\begin{bmatrix}
+ \bm{v}_{\mathrm{B}} \\ \omega_{\mathrm{B}}
+\end{bmatrix}
+\quad\Leftrightarrow\quad
+\begin{bmatrix}
+ \omega_{\mathrm{D}i} \\ \omega_{\mathrm{P}i}
+\end{bmatrix}
+=
+-\frac{1}{r}\begin{bmatrix}
+ \hat{\bm{z}}_{\mathrm{D}i}^{\times} & \hat{\bm{z}}_{\mathrm{P}i}^{\times}
+\end{bmatrix}^{-1}
+\begin{bmatrix}
+ \bm{1} & \bm{s}_{i}^{\times}
+\end{bmatrix}
+\begin{bmatrix}
+ \bm{v}_{\mathrm{B}} \\ \omega_{\mathrm{B}}
+\end{bmatrix}
+\end{align*}
+が成り立つ．
+特に上記の配置の場合，
+\begin{align*}
+\hat{\bm{z}}_{\mathrm{D}i}^{\mathrm{T}}\hat{\bm{z}}_{\mathrm{D}i}^{\times}&=0, &
+\hat{\bm{z}}_{\mathrm{D}i}^{\mathrm{T}}\hat{\bm{z}}_{\mathrm{P}i}^{\times}&=1,
+\\
+\hat{\bm{z}}_{\mathrm{P}i}^{\mathrm{T}}\hat{\bm{z}}_{\mathrm{D}i}^{\times}&=-1, &
+\hat{\bm{z}}_{\mathrm{P}i}^{\mathrm{T}}\hat{\bm{z}}_{\mathrm{P}i}^{\times}&=0,
+\\
+\hat{\bm{z}}_{\mathrm{D}i}^{\mathrm{T}}\bm{s}_{i}^{\times}&=0, &
+\hat{\bm{z}}_{\mathrm{P}i}^{\mathrm{T}}\bm{s}_{i}^{\times}&=\sqrt{2}R
+\end{align*}
+であるので，
+\begin{align*}
+\begin{bmatrix}
+ \omega_{\mathrm{D}i} \\ \omega_{\mathrm{P}i}
+\end{bmatrix}
+=
+-\frac{1}{r}
+\begin{bmatrix}
+-\hat{\bm{z}}_{\mathrm{P}i}^{\mathrm{T}} \\
+ \hat{\bm{z}}_{\mathrm{D}i}^{\mathrm{T}}
+\end{bmatrix}
+\begin{bmatrix}
+ \bm{1} & \bm{s}_{i}^{\times}
+\end{bmatrix}
+\begin{bmatrix}
+ \bm{v}_{\mathrm{B}} \\ \omega_{\mathrm{B}}
+\end{bmatrix}
+=
+\frac{1}{r}
+\begin{bmatrix}
+ \hat{\bm{z}}_{\mathrm{P}i}^{\mathrm{T}} & \sqrt{2}R \\
+-\hat{\bm{z}}_{\mathrm{D}i}^{\mathrm{T}} & 0
+\end{bmatrix}
+\begin{bmatrix}
+ \bm{v}_{\mathrm{B}} \\ \omega_{\mathrm{B}}
+\end{bmatrix}
+\end{align*}
+が言える．
+
+仮定した各ベクトルを実際に代入すると，
+\begin{align*}
+\begin{bmatrix}
+ \omega_{\mathrm{D}1} \\ \omega_{\mathrm{P}1} \\
+ \omega_{\mathrm{D}2} \\ \omega_{\mathrm{P}2} \\
+ \omega_{\mathrm{D}3} \\ \omega_{\mathrm{P}3} \\
+ \omega_{\mathrm{D}4} \\ \omega_{\mathrm{P}4}
+\end{bmatrix}
+=
+\frac{1}{\sqrt{2}r}
+\begin{bmatrix}
+ 1 &  1 & 2R \\
+ 1 & -1 &  0 \\
+-1 &  1 & 2R \\
+ 1 &  1 &  0 \\
+-1 & -1 & 2R \\
+-1 &  1 &  0 \\
+ 1 & -1 & 2R \\
+-1 & -1 &  0
+\end{bmatrix}
+\begin{bmatrix}
+ v_{\mathrm{B}x} \\ v_{\mathrm{B}y} \\ \omega_{\mathrm{B}}
+\end{bmatrix}
+\end{align*}
+を得る．
+駆動輪回転速度のみを抜き出せば，
+\begin{align*}
+\begin{bmatrix}
+ \omega_{\mathrm{D}1} \\
+ \omega_{\mathrm{D}2} \\
+ \omega_{\mathrm{D}3} \\
+ \omega_{\mathrm{D}4}
+\end{bmatrix}
+=
+\frac{1}{\sqrt{2}r}
+\begin{bmatrix}
+ 1 &  1 & 2R \\
+-1 &  1 & 2R \\
+-1 & -1 & 2R \\
+ 1 & -1 & 2R \\
+\end{bmatrix}
+\begin{bmatrix}
+ v_{\mathrm{B}x} \\ v_{\mathrm{B}y} \\ \omega_{\mathrm{B}}
+\end{bmatrix}
+\end{align*}
+となる．
+これは，
+所望の台車並進・旋回速度を得るための速度逆運動学を与える．
+
+\bigskip
+%\section{等価駆動トルク}
+
+車輪$i$の駆動輪に駆動トルク$\tau_{i}$を発生させたとき，
+理想的に全ての車輪が地面に対し滑りなく転がり，
+接触力によって台車に並進力$\bm{f}_{\mathrm{B}}$および旋回トルク$\tau_{\mathrm{B}}$を発生させたとすると，
+仮想仕事の原理より
+\begin{align*}
+\bm{v}_{\mathrm{B}}^{\mathrm{T}}\bm{f}_{\mathrm{B}}+\omega_{\mathrm{B}}\tau_{\mathrm{B}}
+\equiv\sum_{i=1}^{4}\omega_{\mathrm{D}i}\tau_{\mathrm{D}i}
+\quad\Leftrightarrow\quad
+\begin{bmatrix}
+ \bm{v}_{\mathrm{B}}^{\mathrm{T}} & \omega_{\mathrm{B}}
+\end{bmatrix}
+\begin{bmatrix}
+ \bm{f}_{\mathrm{B}} \\ \tau_{\mathrm{B}}
+\end{bmatrix}
+\equiv
+\begin{bmatrix}
+ \bm{v}_{\mathrm{B}}^{\mathrm{T}} & \omega_{\mathrm{B}}
+\end{bmatrix}
+\cdot
+\frac{1}{\sqrt{2}r}
+\begin{bmatrix}
+ 1 & -1 & -1 &  1 \\
+ 1 &  1 & -1 & -1 \\
+2R & 2R & 2R & 2R
+\end{bmatrix}
+\begin{bmatrix}
+ \tau_{\mathrm{D}1} \\
+ \tau_{\mathrm{D}2} \\
+ \tau_{\mathrm{D}3} \\
+ \tau_{\mathrm{D}4}
+\end{bmatrix}
+\end{align*}
+が任意の$\bm{v}_{\mathrm{B}}$，$\omega_{\mathrm{B}}$に対し恒等的に成り立つ．
+よって
+\begin{align*}
+\begin{bmatrix}
+ \bm{f}_{\mathrm{B}} \\ \tau_{\mathrm{B}}
+\end{bmatrix}
+=
+\frac{1}{\sqrt{2}r}
+\begin{bmatrix}
+ 1 & -1 & -1 &  1 \\
+ 1 &  1 & -1 & -1 \\
+2R & 2R & 2R & 2R
+\end{bmatrix}
+\begin{bmatrix}
+ \tau_{\mathrm{D}1} \\
+ \tau_{\mathrm{D}2} \\
+ \tau_{\mathrm{D}3} \\
+ \tau_{\mathrm{D}4}
+\end{bmatrix}
+\end{align*}
+が言える．
+
+
+
+\end{document}
