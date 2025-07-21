@@ -26,7 +26,7 @@
 \setlength{\headsep}{0mm}
 \setlength{\footskip}{10mm}
 
-\title{線形計画問題・2次計画問題の例題を自動生成したい}
+\title{線形計画問題・2次計画問題・線形相補性問題の例題を自動生成したい}
 
 \begin{document}
 \maketitle
@@ -47,6 +47,9 @@
 このフォーマットの読み込み処理も用意するのにひと手間かかるし，さすがに問題規模が大き過ぎるんじゃないか？という気もします．
 手頃なサイズの問題をプログラムの中で自動生成できるならば，それが一番楽です．
 そのような方法を解説しているウェブ記事が見当たらなかったので，自分で書くことにしました．
+
+線形相補性問題は，最適化とは異なるタイプの数理計画問題で，前二者と比べると入手可能な例題の数はさらに少ないです．
+例題自動生成の考え方はほぼ同じですので，ついでに解説します．
 
 
 \section{線形計画問題の例題自動生成}
@@ -306,6 +309,82 @@ bool generate_qp(int n, int m, double xmin, double xmax, zMat *q, zVec *c, zMat 
 それらに合わせるための引数になります．
 
 ただし，行列$\boldsymbol{Q}$が正定値性を満たさないケースや，解が存在しないケースを生成することができません．
+
+
+
+\section{線形相補性問題の例題自動生成}
+
+{\bf 線形相補性問題（Linear Complementary Problem, LCP）}とは，次の条件を満たす変数$\boldsymbol{z}$を求める問題です．
+\begin{align*}
+\boldsymbol{0}\leq\boldsymbol{z}\perp\boldsymbol{M}\boldsymbol{z}+\boldsymbol{p}\geq\boldsymbol{0}
+\end{align*}
+ただし，$\boldsymbol{M}$は非負定値対称行列，$\boldsymbol{p}$は定数ベクトルです．あるいは次のようにも書けます．
+\begin{align*}
+\boldsymbol{w}=\boldsymbol{M}\boldsymbol{z}+\boldsymbol{p},\quad
+\boldsymbol{w}\geq\boldsymbol{0},\quad
+\boldsymbol{z}\geq\boldsymbol{0},\quad
+\boldsymbol{w}^{\mathrm{T}}\boldsymbol{z}=0
+\end{align*}
+$\boldsymbol{w}=[w_{1}~\cdots~w_{n}]^{\mathrm{T}}$と$\boldsymbol{z}=[z_{1}~\cdots~z_{n}]^{\mathrm{T}}$（$n$は$\boldsymbol{z}$の次元数）は同数の成分を持ちますが，$\boldsymbol{w}\geq\boldsymbol{0}$かつ$\boldsymbol{z}\geq\boldsymbol{0}$なので，$\boldsymbol{w}^{\mathrm{T}}\boldsymbol{z}=0$となるためには$w_{i}$と$z_{i}$（$\forall i\in\{1,\cdots,n\}$）のどちらか一方は必ず0になる，ということが「相補性」の意味です．
+
+例題生成アルゴリズムも，この性質から直接的に導けます．
+
+1. 解$(\boldsymbol{w}^{*},\boldsymbol{z}^{*})$を生成する．$i=1\sim n$について，毎回$0, 1$の2値乱数を求め，$0$ならば$w_{i}^{*}=0$かつ$z_{i}^{*}$は適当な正の数，$1$ならば$w_{i}^{*}$は適当な正の数かつ$z_{i}^{*}=0$とする．
+
+2. 行列$\boldsymbol{R}$，$\boldsymbol{S}$を乱数的に生成し，$\boldsymbol{Q}=\boldsymbol{R}^{\mathrm{T}}\boldsymbol{R}+\boldsymbol{1}+\alpha(\boldsymbol{S}-\boldsymbol{S}^{\mathrm{T}})$とする．
+ただし，$\boldsymbol{1}$は$n\times n$単位行列，$\alpha$は微小な数（たとえば$0.1$）とする．
+（これは$\boldsymbol{Q}$の主小行列式が全て正であること=線形相補性問題の解が一意に定まる条件を保証します）
+
+3. $\boldsymbol{p}=\boldsymbol{w}^{*}-\boldsymbol{M}\boldsymbol{z}^{*}$として$\boldsymbol{p}$を決める．
+
+ZMのテストプログラム\verb|opt_lcp_test.c|の中の関数\verb|generate_lcp()|に，これを実装しています．
+\begin{verbatim}
+bool generate_lcp(int n, zMat *m, zVec *p, zVec *w_ans, zVec *z_ans)
+{
+  zMat r;
+  zVec mz;
+  int i;
+  bool ret = false;
+
+  *m = zMatAllocSqr( n );
+  *p = zVecAlloc( n );
+  *w_ans = zVecAlloc( n );
+  *z_ans = zVecAlloc( n );
+  mz = zVecAlloc( n );
+  r = zMatAllocSqr( n );
+  if( !*m || !*p || !*w_ans || !*z_ans || !mz || !r ) goto TERMINATE;
+  for( i=0; i<n; i++ ){
+    if( zRandI(0,1) == 0 ){
+      zVecSetElemNC( *w_ans, i, 0 );
+      zVecSetElemNC( *z_ans, i, zRandF( 0, 10 ) );
+    } else{
+      zVecSetElemNC( *w_ans, i, zRandF( 0, 10 ) );
+      zVecSetElemNC( *z_ans, i, 0 );
+    }
+  }
+  zMatRandUniform( r, -10, 10 );
+  zMulMatTMat( r, r, *m );
+  for( i=0; i<n; i++ )
+    zMatElemNC(*m,i,i) += 1.0;
+  zMatRandUniform( r, -1, 1 );
+  zMatAddDRC( *m, r );
+  zMatTDRC( r );
+  zMatSubDRC( *m, r );
+  zMulMatVec( *m, *z_ans, mz );
+  zVecSub( *w_ans, mz, *p );
+
+  ret = true;
+ TERMINATE:
+  zVecFree( mz );
+  if( !ret ){
+    zMatFree( *m );
+    zVecFreeAtOnce( 3, *p, *w_ans, *z_ans );
+  }
+  return ret;
+}
+\end{verbatim}
+
+解が存在しないケースを生成できない点は，前二者と同様です．
 
 
 \end{document}
